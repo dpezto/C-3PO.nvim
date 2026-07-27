@@ -18,7 +18,7 @@ Sleep 2s
 Show
 
 Sleep 2s
-Type ":Ccc highlighter toggle"
+Type ":C3 highlighter toggle"
 Enter
 Sleep 1.5s
 Type "@:"

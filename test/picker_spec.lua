@@ -1,17 +1,17 @@
-local utils = require("ccc.utils.test")
-local hex = require("ccc.picker.hex")
-local css_rgb = require("ccc.picker.css_rgb")
-local css_hsl = require("ccc.picker.css_hsl")
-local css_hwb = require("ccc.picker.css_hwb")
-local css_lab = require("ccc.picker.css_lab")
-local css_lch = require("ccc.picker.css_lch")
-local css_oklab = require("ccc.picker.css_oklab")
-local css_oklch = require("ccc.picker.css_oklch")
-local css_name = require("ccc.picker.css_name")
-local custom_entries = require("ccc.picker.custom_entries")
-local trailing_whitespace = require("ccc.picker.trailing_whitespace")
-local ansi_escape = require("ccc.picker.ansi_escape")
-local latex = require("ccc.picker.latex")
+local utils = require("c3po.utils.test")
+local hex = require("c3po.picker.hex")
+local css_rgb = require("c3po.picker.css_rgb")
+local css_hsl = require("c3po.picker.css_hsl")
+local css_hwb = require("c3po.picker.css_hwb")
+local css_lab = require("c3po.picker.css_lab")
+local css_lch = require("c3po.picker.css_lch")
+local css_oklab = require("c3po.picker.css_oklab")
+local css_oklch = require("c3po.picker.css_oklch")
+local css_name = require("c3po.picker.css_name")
+local custom_entries = require("c3po.picker.custom_entries")
+local trailing_whitespace = require("c3po.picker.trailing_whitespace")
+local ansi_escape = require("c3po.picker.ansi_escape")
+local latex = require("c3po.picker.latex")
 
 ---@param a number[]
 ---@return number[]
@@ -21,7 +21,7 @@ local function div255(a)
   end, a)
 end
 
----@param module ccc.ColorPicker
+---@param module c3po.ColorPicker
 ---@param str string
 ---@param expect_rgb integer[]? #range in [0-255]. If nil, expect parsing fail.
 ---@param expect_alpha Alpha?
@@ -244,25 +244,25 @@ describe("Color detection test", function()
     local default_color = "#db7093"
 
     it("enable for all filetypes (default)", function()
-      test("markdown", {}, "ccc  ", default_color, 2)
-      test("text", {}, "ccc   ", default_color, 3)
+      test("markdown", {}, "c3po  ", default_color, 2)
+      test("text", {}, "c3po   ", default_color, 3)
     end)
 
     it("enable in only markdown", function()
       local opts = { enable = { "markdown" } }
-      test("markdown", opts, "ccc  ", default_color, 2)
-      test_fail("text", opts, "ccc  ")
+      test("markdown", opts, "c3po  ", default_color, 2)
+      test_fail("text", opts, "c3po  ")
     end)
 
     it("enable in except markdown", function()
       local opts = { disable = { "markdown" } }
-      test_fail("markdown", opts, "ccc  ")
-      test("text", opts, "ccc  ", default_color, 2)
-      test("lua", opts, "ccc  ", default_color, 2)
+      test_fail("markdown", opts, "c3po  ")
+      test("text", opts, "c3po  ", default_color, 2)
+      test("lua", opts, "c3po  ", default_color, 2)
     end)
 
     it("Set default color", function()
-      test("markdown", { default_color = "#ff0000" }, "ccc  ", "#ff0000", 2)
+      test("markdown", { default_color = "#ff0000" }, "c3po  ", "#ff0000", 2)
     end)
 
     it("Set palette to specify color per filetype", function()
@@ -272,13 +272,13 @@ describe("Color detection test", function()
         },
         default_color = "#00ff00",
       }
-      test("markdown", opts, "ccc  ", "#ff0000", 2)
-      test("text", opts, "ccc  ", "#00ff00", 2)
+      test("markdown", opts, "c3po  ", "#ff0000", 2)
+      test("text", opts, "c3po  ", "#00ff00", 2)
     end)
   end)
 
   describe("ANSI Escape", function()
-    ---@param module ccc.ColorPicker
+    ---@param module c3po.ColorPicker
     ---@param str string
     ---@param expect_hl_def highlightDefinition
     local function test_hl_def(module, str, expect_hl_def)
@@ -413,7 +413,7 @@ describe("Color detection test", function()
     end)
 
     it("restricted views match only their own model", function()
-      local latex_cmyk = require("ccc.picker.latex_cmyk")
+      local latex_cmyk = require("c3po.picker.latex_cmyk")
       test_rgb(latex_cmyk, " {cmyk}{0, 1, 1, 0} ", { 255, 0, 0 }, nil)
       test_rgb(latex_cmyk, " {RGB}{255, 0, 0} ", nil, nil)
       -- The full picker is untouched by the restriction.

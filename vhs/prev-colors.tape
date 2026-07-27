@@ -19,7 +19,7 @@ Show
 
 Sleep 1s
 # Pick and confirm one color so there is exactly one history entry
-Type ":Ccc pick"
+Type ":C3 pick"
 Enter
 Sleep 1s
 Type "3"
@@ -29,7 +29,7 @@ Sleep 800ms
 # Move to another color, then restore the saved one from history
 Type "W"
 Sleep 500ms
-Type ":Ccc pick"
+Type ":C3 pick"
 Enter
 Sleep 1.2s
 Type "g"

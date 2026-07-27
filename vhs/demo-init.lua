@@ -1,7 +1,7 @@
 -- Minimal config for the vhs tapes in this directory.
 -- Run vhs from the repo root: `vhs vhs/pick.tape` (or `make demo`).
 vim.opt.runtimepath:prepend(vim.fn.getcwd())
-vim.cmd.runtime("plugin/ccc.vim")
+vim.cmd.runtime("plugin/c3po.vim")
 
 vim.opt.termguicolors = true
 vim.opt.swapfile = false
@@ -11,7 +11,7 @@ vim.opt.ruler = false
 vim.opt.showcmd = false
 vim.opt.fillchars = { eob = " " }
 
-require("ccc").setup({
+require("c3po").setup({
   -- Rounded slider ends; the glyphs live in Fira Code (the tapes' font).
   bar_cap_start = "\u{ee03}",
   bar_char = "\u{ee04}",

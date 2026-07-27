@@ -1,4 +1,4 @@
-# :Ccc pick — sliders, input/output cycling, alpha toggle.
+# :C3 pick — sliders, input/output cycling, alpha toggle.
 Output assets/pick.gif
 Set FontFamily "Fira Code"
 Set FontSize 18
@@ -18,7 +18,7 @@ Sleep 2s
 Show
 
 Sleep 1s
-Type ":Ccc pick"
+Type ":C3 pick"
 Enter
 Sleep 1.5s
 # Nudge the red channel, then jump the green one to 80%

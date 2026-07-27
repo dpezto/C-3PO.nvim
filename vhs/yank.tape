@@ -1,4 +1,4 @@
-# :Ccc yank — grab the color under the cursor in any format, then paste it.
+# :C3 yank — grab the color under the cursor in any format, then paste it.
 Output assets/yank.gif
 Set FontFamily "Fira Code"
 Set FontSize 18
@@ -18,20 +18,20 @@ Sleep 2s
 Type "i#1e90ff"
 Escape
 Type "0"
-Type ":Ccc highlighter enable"
+Type ":C3 highlighter enable"
 Enter
 Sleep 500ms
 Show
 
 Sleep 1s
-Type ":Ccc yank latex_cmyk"
+Type ":C3 yank latex_cmyk"
 Enter
 Sleep 1.5s
 Type "o"
 Escape
 Type "p"
 Sleep 1s
-Type "0:Ccc yank css_hsl"
+Type "0:C3 yank css_hsl"
 Enter
 Sleep 1.5s
 Type "o"

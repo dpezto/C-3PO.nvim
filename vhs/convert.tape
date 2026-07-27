@@ -1,4 +1,4 @@
-# :Ccc convert — type it once, then cycle with @:
+# :C3 convert — type it once, then cycle with @:
 Output assets/convert.gif
 Set FontFamily "Fira Code"
 Set FontSize 18
@@ -18,13 +18,13 @@ Sleep 2s
 Type "i#ff8800"
 Escape
 Type "0"
-Type ":Ccc highlighter enable"
+Type ":C3 highlighter enable"
 Enter
 Sleep 500ms
 Show
 
 Sleep 1s
-Type ":Ccc convert"
+Type ":C3 convert"
 Enter
 Sleep 1.2s
 Type "@:"
