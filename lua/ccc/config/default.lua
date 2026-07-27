@@ -1,8 +1,4 @@
-local ccc = require("ccc")
-local input = ccc.input
-local output = ccc.output
-local picker = ccc.picker
-local mapping = ccc.mapping
+local mapping = require("ccc.mapping")
 local utils = require("ccc.utils")
 
 ---@type ccc.Options
@@ -29,27 +25,9 @@ return {
   save_on_quit = false,
   max_prev_colors = 10,
   alpha_show = "auto",
-  inputs = {
-    input.rgb,
-    input.hsl,
-    input.cmyk,
-  },
-  outputs = {
-    output.hex,
-    output.hex_short,
-    output.css_rgb,
-    output.css_hsl,
-  },
-  pickers = {
-    picker.hex,
-    picker.css_rgb,
-    picker.css_hsl,
-    picker.css_hwb,
-    picker.css_lab,
-    picker.css_lch,
-    picker.css_oklab,
-    picker.css_oklch,
-  },
+  inputs = { "rgb", "hsl", "cmyk" },
+  outputs = { "hex", "hex_short", "css_rgb", "css_hsl" },
+  pickers = { "hex", "css_rgb", "css_hsl", "css_hwb", "css_lab", "css_lch", "css_oklab", "css_oklch" },
   ui = require("ccc.ui.float"),
   output_line = function(before_color, after_color, width)
     local b_hex = before_color:hex()
@@ -75,28 +53,24 @@ return {
     picker = true,
     update_insert = true,
   },
-  -- stylua: ignore
-  convert = {
-      { picker.hex,     output.css_rgb },
-      { picker.css_rgb, output.css_hsl },
-      { picker.css_hsl, output.hex     },
-  },
+  -- A cycle: each format converts to the next, and the last back to the first.
+  convert = { "hex", "css_rgb", "css_hsl" },
   recognize = {
     input = false,
     output = false,
     -- stylua: ignore
     pattern = {
-        [picker.css_rgb]   = { input.rgb,   output.css_rgb   },
-        [picker.css_name]  = { input.rgb,   output.css_rgb   },
-        [picker.hex]       = { input.rgb,   output.hex       },
-        [picker.hex_long]  = { input.rgb,   output.hex       },
-        [picker.hex_short] = { input.rgb,   output.hex_short },
-        [picker.css_hsl]   = { input.hsl,   output.css_hsl   },
-        [picker.css_hwb]   = { input.hwb,   output.css_hwb   },
-        [picker.css_lab]   = { input.lab,   output.css_lab   },
-        [picker.css_lch]   = { input.lch,   output.css_lch   },
-        [picker.css_oklab] = { input.oklab, output.css_oklab },
-        [picker.css_oklch] = { input.oklch, output.css_oklch },
+        css_rgb   = { "rgb",   "css_rgb"   },
+        css_name  = { "rgb",   "css_rgb"   },
+        hex       = { "rgb",   "hex"       },
+        hex_long  = { "rgb",   "hex"       },
+        hex_short = { "rgb",   "hex_short" },
+        css_hsl   = { "hsl",   "css_hsl"   },
+        css_hwb   = { "hwb",   "css_hwb"   },
+        css_lab   = { "lab",   "css_lab"   },
+        css_lch   = { "lch",   "css_lch"   },
+        css_oklab = { "oklab", "css_oklab" },
+        css_oklch = { "oklch", "css_oklch" },
     },
   },
   mappings = {

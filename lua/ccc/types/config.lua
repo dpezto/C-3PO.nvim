@@ -66,9 +66,9 @@
 ---@field save_on_quit? boolean
 ---@field max_prev_colors? integer
 ---@field alpha_show? ccc.Option.show_mode
----@field inputs? ccc.ColorInput[]
----@field outputs? ccc.ColorOutput[]
----@field pickers? ccc.ColorPicker[]
+---@field inputs? (string|ccc.ColorInput)[]
+---@field outputs? (string|ccc.ColorOutput)[]
+---@field pickers? (string|ccc.ColorPicker)[]
 ---@field ui? ccc.UI
 ---@field lsp? boolean
 ---@field output_line? fun(before_color: ccc.Color, after_color: ccc.Color, width: integer): string, integer, integer, integer, integer
@@ -76,7 +76,7 @@
 ---@field virtual_symbol? string
 ---@field virtual_pos? "inline-left" | "inline-right" | "eol"
 ---@field highlighter? ccc.Option.highlighter.P
----@field convert? { [1]: ccc.ColorPicker, [2]: ccc.ColorOutput }[]
+---@field convert? string[] | { [1]: string|ccc.ColorPicker, [2]: string|ccc.ColorOutput }[]
 ---@field recognize? ccc.Option.recognize.P
 ---@field mappings? table<string, function>
 ---@field disable_default_mappings? boolean
@@ -93,5 +93,5 @@
 ---@class ccc.Option.recognize.P
 ---@field input? boolean
 ---@field output? boolean
----@field pattern? table<ccc.ColorPicker, { [1]: ccc.ColorInput, [2]: ccc.ColorOutput }>
+---@field pattern? table<string|ccc.ColorPicker, { [1]: string|ccc.ColorInput, [2]: string|ccc.ColorOutput }>
 -- }}}

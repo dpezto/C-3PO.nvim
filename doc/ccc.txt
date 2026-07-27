@@ -209,57 +209,50 @@ Default: "auto"
                                                              *ccc-option-inputs*
 inputs ~
 table
-Default: {
-	ccc.input.rgb,
-	ccc.input.hsl,
-	ccc.input.cmyk,
-}
+Default: { "rgb", "hsl", "cmyk" }
+	Each entry is either a preset name or a module. Names save pulling
+	ccc.input into scope, and both forms may be mixed.
 	List of color system to be activated. |ccc-action-toggle_input_mode|
 	toggles in this order. The first one is the default used at the first
 	startup. Once activated, it will keep the previous input mode.
 	The presets currently available are as follows:
-		- RGB    ccc.input.rgb
-		- HSL    ccc.input.hsl
-		- HWB    ccc.input.hwb
-		- Lab    ccc.input.lab
-		- LCH    ccc.input.lch
-		- OKLab  ccc.input.oklab
-		- OKLCH  ccc.input.oklch
-		- CMYK   ccc.input.cmyk
-		- HSLuv  ccc.input.hsluv
-		- OKHSL  ccc.input.okhsl
-		- HSV    ccc.input.hsv
-		- OKHSV  ccc.input.okhsv
-		- XYZ    ccc.input.xyz
+		- RGB    "rgb"
+		- HSL    "hsl"
+		- HWB    "hwb"
+		- Lab    "lab"
+		- LCH    "lch"
+		- OKLab  "oklab"
+		- OKLCH  "oklch"
+		- CMYK   "cmyk"
+		- HSLuv  "hsluv"
+		- OKHSL  "okhsl"
+		- HSV    "hsv"
+		- OKHSV  "okhsv"
+		- XYZ    "xyz"
 
 
                                                             *ccc-option-outputs*
 outputs ~
 table
-Default: {
-	ccc.output.hex,
-	ccc.output.hex_short,
-	ccc.output.css_rgb,
-	ccc.output.css_hsl,
-}
+Default: { "hex", "hex_short", "css_rgb", "css_hsl" }
 	List of output format to be activated. |ccc-action-toggle_ouotput_mode|
 	toggles in this order. The first one is the default used at the first
 	startup. Once activated, it will keep the previous output mode.
 	The presets currently available are as follows:
-		- HEX (6/8 digits)  ccc.output.hex
-		      (3/4 digits)  ccc.output.hex_short
-		- CssRGB            ccc.output.css_rgb
-		- CssRGBA           ccc.output.css_rgba
-		- CssHSL            ccc.output.css_hsl
-		- CssHWB            ccc.output.css_hwb
-		- CssLab            ccc.output.css_lab
-		- CssLCH            ccc.output.css_lch
-		- CssOKLab          ccc.output.css_oklab
-		- CssOKLCH          ccc.output.css_oklch
-		- Float             ccc.output.float
-		- LatexRGB          ccc.output.latex_rgb
-		- LatexCMYK         ccc.output.latex_cmyk
-		- LatexHTML         ccc.output.latex_html
+		- HEX (6/8 digits)  "hex"
+		      (3/4 digits)  "hex_short"
+		- CssRGB            "css_rgb"
+		- CssRGBA           "css_rgba"
+		- CssHSL            "css_hsl"
+		- CssHWB            "css_hwb"
+		- CssLab            "css_lab"
+		- CssLCH            "css_lch"
+		- CssOKLab          "css_oklab"
+		- CssOKLCH          "css_oklch"
+		- Float             "float"
+		- LatexRGB          "latex_rgb"
+		- LatexCMYK         "latex_cmyk"
+		- LatexHTML         "latex_html"
 
 	Latex* emit the model and arguments of an xcolor color specification,
 	for use with \definecolor and \color.
@@ -279,32 +272,26 @@ Default: {
 pickers ~
 table
 Default: {
-	ccc.picker.hex,
-	ccc.picker.css_rgb,
-	ccc.picker.css_hsl,
-	ccc.picker.css_hwb,
-	ccc.picker.css_lab,
-	ccc.picker.css_lch,
-	ccc.picker.css_oklab,
-	ccc.picker.css_oklch,
+	"hex", "css_rgb", "css_hsl", "css_hwb",
+	"css_lab", "css_lch", "css_oklab", "css_oklch",
 }
 	List of formats that can be detected by |:Ccc-pick| to be activated.
 	The presets currently available are as follows:
-		- HEX       ccc.picker.hex
-		            ccc.picker.hex_long (#RRGGBB, #RRGGBBAA)
-		            ccc.picker.hex_short (#RGB, #RGBA)
-		- CssRGB    ccc.picker.css_rgb
-		- CssHSL    ccc.picker.css_hsl
-		- CssHWB    ccc.picker.css_hwb
-		- CssLab    ccc.picker.css_lab,
-		- CssLCH    ccc.picker.css_lch,
-		- CssOKLab  ccc.picker.css_oklab,
-		- CssOKLCH  ccc.picker.css_oklch,
-		- CssName   ccc.picker.css_name
-		- Defaults  ccc.picker.defaults (Neovim default colorscheme)
-		- LatexRGB  ccc.picker.latex_rgb ({RGB}{...}, {rgb}{...})
-		- LatexCMYK ccc.picker.latex_cmyk ({cmyk}{...})
-		- LatexHTML ccc.picker.latex_html ({HTML}{...})
+		- HEX       "hex"
+		            "hex_long" (#RRGGBB, #RRGGBBAA)
+		            "hex_short" (#RGB, #RGBA)
+		- CssRGB    "css_rgb"
+		- CssHSL    "css_hsl"
+		- CssHWB    "css_hwb"
+		- CssLab    "css_lab",
+		- CssLCH    "css_lch",
+		- CssOKLab  "css_oklab",
+		- CssOKLCH  "css_oklch",
+		- CssName   "css_name"
+		- Defaults  "defaults" (Neovim default colorscheme)
+		- LatexRGB  "latex_rgb" ({RGB}{...}, {rgb}{...})
+		- LatexCMYK "latex_cmyk" ({cmyk}{...})
+		- LatexHTML "latex_html" ({HTML}{...})
 	Css* conforms to CSS Color Module Level 4.
 	https://www.w3.org/TR/css-color-4/
 	Latex* detect the xcolor color models, with or without a surrounding
@@ -504,11 +491,18 @@ Default: true
                                                             *ccc-option-convert*
 convert ~
 table
-Default: {
-	{ ccc.picker.hex, ccc.output.css_rgb },
-	{ ccc.picker.css_rgb, ccc.output.css_hsl },
-	{ ccc.picker.css_hsl, ccc.output.hex },
-}
+Default: { "hex", "css_rgb", "css_hsl" }
+	A list of names is a cycle: each format converts to the next, and
+	the last back to the first.
+
+	Pass {picker, output} pairs instead when the mapping is not a cycle,
+	or when a picker and its output are named differently:
+>lua
+	convert = {
+		{ "hex_short", "hex" },
+		{ "hex", "css_rgb" },
+	}
+<
 	Specify the correspondence between picker and output. The default
 	setting converts the color to css_rgb if it is in hex format, to
 	css_hsl if it is in css_rgb format, and to hex if it is in css_hsl
