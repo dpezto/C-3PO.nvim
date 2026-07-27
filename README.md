@@ -1,50 +1,101 @@
-# ccc.nvim
+<!--toc:start-->
+- [C-3PO.nvim](#c-3ponvim)
+- [Install](#install)
+- [Demo](#demo)
+  - [Pick](#pick)
+  - [Convert in place](#convert-in-place)
+  - [Yank in any format](#yank-in-any-format)
+  - [Restore previously used colors](#restore-previously-used-colors)
+  - [Highlighter](#highlighter)
+<!--toc:end-->
 
-**C**reate **C**olor **C**ode in neovim.
+<!-- <img src="./assets/icon.svg" align="right" width="120" alt="C-3PO.nvim"> -->
 
-Use the colorful sliders to easily generate any desired color!
+# C-3PO.nvim
+
+> *"I am C-3PO, human–cyborg relations. I am fluent in over six million forms
+> of communication."*
+
+A protocol droid for color. It reads whatever dialect the buffer speaks — hex,
+`rgb()`, `oklch()`, xcolor's `{cmyk}` — and translates it into whichever one
+you need, without you ever having to think in numbers.
+
+The **C-3** is inherited from [uga-rosa/ccc.nvim](https://github.com/uga-rosa/ccc.nvim)
+(**C**reate **C**olor **C**ode), which this started as a fork of and remains
+indebted to. The **PO** followed naturally.
 
 - Features
     - No dependency.
-    - Dynamic highlighting of sliders.
-    - Supports more than 10 color spaces (RGB, HSL, CMYK, etc.).
+    - One `:Ccc` command, with subcommands, completion and a menu.
+    - Dynamic highlighting of sliders, clickable ends, mouse and scroll support.
+    - Supports more than 10 color spaces (RGB, HSL, CMYK, OKLCH, etc.).
     - Seamless input/output mode change.
     - Restore previously used colors.
     - Transparent slider for css functions (e.g. `rgb()`, `hsl()`)
+    - CSS Color Level 4 and LaTeX (xcolor) formats, in both directions.
+    - Yank a color in any format without touching the buffer.
     - Color Highlighter for many formats.
     - Programmable modules (input/output/picker)
 
 - Requirements
-    - neovim 0.9.0+
+    - neovim 0.12+
 
 See [doc](./doc/ccc.txt) for details.
 
-# GIF
+# Install
 
-## Seamless mode change
+With [lazy.nvim](https://github.com/folke/lazy.nvim):
 
-![cccpick](https://user-images.githubusercontent.com/82267684/225461164-a36d4ad3-da49-4124-b957-e0749f14fa05.gif)
+```lua
+{
+  "dpezto/ccc.nvim",
+  cmd = "Ccc",
+  opts = {
+    highlighter = { auto_enable = true },
+  },
+}
+```
+
+No dependencies, any plugin manager works. Nothing is set up until
+`require("ccc").setup()` runs, so pass `opts`/`config`.
+
+# Demo
+
+All recordings are generated with [vhs](https://github.com/charmbracelet/vhs)
+from the tapes in [`vhs/`](./vhs) — `make demo` re-records them.
+
+## Pick
+
+`:Ccc pick` — sliders for the color under the cursor, `i`/`o` cycle the input
+color space and the output format (CSS, hex, LaTeX xcolor, ...), `a` toggle transparency.
+
+![pick](./assets/pick.gif)
+
+## Convert in place
+
+`:Ccc convert` — cycle the color through your configured formats without
+opening the UI.
+
+![convert](./assets/convert.gif)
+
+## Yank in any format
+
+`:Ccc yank [output]` — grab the color under the cursor in any output format,
+buffer untouched.
+
+![yank](./assets/yank.gif)
 
 ## Restore previously used colors
 
-![restore](https://user-images.githubusercontent.com/82267684/225461172-4c3e17af-99b6-4da9-8216-c00dc20c7a40.gif)
+Inside the picker, `g` opens the history row and `<CR>` applies the selected
+color (`w`/`b` walk the row when there is more than one).
 
-## Highlight pickable colors
+![prev-colors](./assets/prev-colors.gif)
 
-- LSP `textDocument/documentColor` is supported (Requires neovim built-in LSP client).
+## Highlighter
 
-![image](https://user-images.githubusercontent.com/430272/192379267-7b069281-021a-4ee5-bc65-58def20f9c0d.png)
+Highlights every configured format, xcolor specifications included. LSP colors
+(`textDocument/documentColor`) are highlighted natively by neovim's
+`vim.lsp.document_color`; ccc picks them up in `:Ccc pick` and `:Ccc yank`.
 
-- Many color formats conforming to CSS Color Module level4 can be highlighted without LSP.
-
-![image](https://user-images.githubusercontent.com/82267684/196505445-fac76002-7344-47f7-84cb-710c3ecbb717.png)
-
-There are some special picker to highlight. Descriptions are in the doc.
-If you would like to see images, please visit the [wiki](https://github.com/uga-rosa/ccc.nvim/wiki/Special-pickers).
-
-## Use multiple color spaces simultaneously
-
-- Advanced settings
-- See [wiki](https://github.com/uga-rosa/ccc.nvim/wiki/Use-multiple-color-spaces-simultaneously)
-
-![multi](https://user-images.githubusercontent.com/82267684/225504962-bf71730e-e681-4ee3-8a26-f949b1973e71.gif)
+![highlight](./assets/highlight.gif)
