@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="C-3PO minifig head sticker">
+  <title>C-3PO.nvim</title>
+
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#ffe9a3"/>
+      <stop offset="0.28" stop-color="#f5c542"/>
+      <stop offset="0.68" stop-color="#d99a1f"/>
+      <stop offset="1" stop-color="#a86f12"/>
+    </linearGradient>
+    <linearGradient id="goldStud" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffeeb5"/>
+      <stop offset="1" stop-color="#e0a72c"/>
+    </linearGradient>
+    <linearGradient id="eyeGlow" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#fffbe8"/>
+      <stop offset="0.55" stop-color="#ffe07a"/>
+      <stop offset="1" stop-color="#d98f14"/>
+    </linearGradient>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a2a10"/>
+      <stop offset="1" stop-color="#241a09"/>
+    </linearGradient>
+  </defs>
+
+  <!-- sticker drop shadow: a plain offset copy, so no SVG filters are needed -->
+  <g transform="translate(9 13)" opacity="0.28">
+    <path d="M212 66h88a16 16 0 0 1 16 16v34h-120V82a16 16 0 0 1 16-16z" fill="#000"/>
+    <path d="M256 106c74 0 118 26 118 74v170c0 54-40 88-118 88s-118-34-118-88V180c0-48 44-74 118-74z" fill="#000"/>
+  </g>
+
+  <!-- white sticker border, drawn as fat strokes under the artwork; the
+       darker pass underneath keeps the sticker readable on a white page -->
+  <g fill="none" stroke="#d9c9a0" stroke-width="44" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M212 66h88a16 16 0 0 1 16 16v34h-120V82a16 16 0 0 1 16-16z"/>
+    <path d="M256 106c74 0 118 26 118 74v170c0 54-40 88-118 88s-118-34-118-88V180c0-48 44-74 118-74z"/>
+  </g>
+  <g fill="none" stroke="#fffdf5" stroke-width="34" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M212 66h88a16 16 0 0 1 16 16v34h-120V82a16 16 0 0 1 16-16z"/>
+    <path d="M256 106c74 0 118 26 118 74v170c0 54-40 88-118 88s-118-34-118-88V180c0-48 44-74 118-74z"/>
+  </g>
+
+  <!-- stud on top of the minifig head -->
+  <path d="M212 66h88a16 16 0 0 1 16 16v34h-120V82a16 16 0 0 1 16-16z" fill="url(#goldStud)"/>
+  <ellipse cx="256" cy="66" rx="44" ry="13" fill="#ffeeb5"/>
+
+  <!-- ear discs, tucked behind the head -->
+  <g fill="#c98f1c">
+    <rect x="112" y="228" width="34" height="76" rx="12"/>
+    <rect x="366" y="228" width="34" height="76" rx="12"/>
+  </g>
+
+  <!-- head -->
+  <path d="M256 106c74 0 118 26 118 74v170c0 54-40 88-118 88s-118-34-118-88V180c0-48 44-74 118-74z" fill="url(#gold)" stroke="#8a5b0d" stroke-width="5" stroke-opacity="0.55"/>
+
+  <!-- soft highlight down the left cheek -->
+  <path d="M176 150c-16 20-22 44-22 74v128c0 22 6 40 18 54-30-18-40-44-40-76V186c0-16 16-30 44-36z" fill="#fff8dc" opacity="0.35"/>
+
+  <!-- brow plate -->
+  <path d="M150 196c30-16 66-24 106-24s76 8 106 24v20c-30-16-66-24-106-24s-76 8-106 24z" fill="#b07c15" opacity="0.75"/>
+
+  <!-- eyes -->
+  <g>
+    <circle cx="206" cy="248" r="42" fill="url(#plate)"/>
+    <circle cx="306" cy="248" r="42" fill="url(#plate)"/>
+    <circle cx="206" cy="248" r="29" fill="url(#eyeGlow)"/>
+    <circle cx="306" cy="248" r="29" fill="url(#eyeGlow)"/>
+    <circle cx="197" cy="238" r="9" fill="#fffdf0" opacity="0.9"/>
+    <circle cx="297" cy="238" r="9" fill="#fffdf0" opacity="0.9"/>
+  </g>
+
+  <!-- cheek seams -->
+  <g stroke="#a06d10" stroke-width="7" stroke-linecap="round" opacity="0.6">
+    <path d="M160 300c8 26 10 50 8 74"/>
+    <path d="M352 300c-8 26-10 50-8 74"/>
+  </g>
+
+  <!-- mouth grille -->
+  <rect x="192" y="326" width="128" height="52" rx="16" fill="url(#plate)"/>
+  <g stroke="#e8b73a" stroke-width="7" stroke-linecap="round" opacity="0.85">
+    <path d="M212 338v28"/>
+    <path d="M234 338v28"/>
+    <path d="M256 338v28"/>
+    <path d="M278 338v28"/>
+    <path d="M300 338v28"/>
+  </g>
+
+  <!-- chin plate -->
+  <path d="M198 400c18 8 38 12 58 12s40-4 58-12" fill="none" stroke="#a06d10" stroke-width="8" stroke-linecap="round" opacity="0.55"/>
+</svg>
