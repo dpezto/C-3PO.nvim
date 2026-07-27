@@ -1,90 +1,123 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="C-3PO minifig head sticker">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="C-3PO head sticker">
   <title>C-3PO.nvim</title>
 
   <defs>
-    <linearGradient id="gold" x1="0" y1="0" x2="0.35" y2="1">
-      <stop offset="0" stop-color="#ffe9a3"/>
-      <stop offset="0.28" stop-color="#f5c542"/>
-      <stop offset="0.68" stop-color="#d99a1f"/>
-      <stop offset="1" stop-color="#a86f12"/>
+    <linearGradient id="gold" x1="0.12" y1="0" x2="0.82" y2="1">
+      <stop offset="0" stop-color="#fff5cd"/>
+      <stop offset="0.16" stop-color="#f9d570"/>
+      <stop offset="0.4" stop-color="#e5ad33"/>
+      <stop offset="0.6" stop-color="#c78a1b"/>
+      <stop offset="0.8" stop-color="#dfa62b"/>
+      <stop offset="1" stop-color="#8a5d0c"/>
     </linearGradient>
-    <linearGradient id="goldStud" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffeeb5"/>
-      <stop offset="1" stop-color="#e0a72c"/>
+    <linearGradient id="goldEdge" x1="0" y1="0" x2="1" y2="0.3">
+      <stop offset="0" stop-color="#ffeeb0"/>
+      <stop offset="0.5" stop-color="#d69c25"/>
+      <stop offset="1" stop-color="#8f610d"/>
     </linearGradient>
-    <linearGradient id="eyeGlow" x1="0" y1="0" x2="0.4" y2="1">
-      <stop offset="0" stop-color="#fffbe8"/>
-      <stop offset="0.55" stop-color="#ffe07a"/>
-      <stop offset="1" stop-color="#d98f14"/>
+    <linearGradient id="neckGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7d520c"/>
+      <stop offset="0.35" stop-color="#d9a32c"/>
+      <stop offset="0.7" stop-color="#b8830f"/>
+      <stop offset="1" stop-color="#6d4708"/>
     </linearGradient>
-    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#3a2a10"/>
-      <stop offset="1" stop-color="#241a09"/>
-    </linearGradient>
+    <radialGradient id="lens" cx="0.4" cy="0.34" r="0.75">
+      <stop offset="0" stop-color="#ffdda8"/>
+      <stop offset="0.42" stop-color="#f4a340"/>
+      <stop offset="0.82" stop-color="#c96a12"/>
+      <stop offset="1" stop-color="#844006"/>
+    </radialGradient>
+
+    <!-- inverted droplet: peaked crown, widest across the eyes, tapering jaw -->
+    <path id="skull" d="M256 50c44 0 80 36 106 96 30 68 54 108 58 148 5 54-17 106-64 144-26 21-60 32-100 32s-74-11-100-32c-47-38-69-90-64-144 4-40 28-80 58-148C176 86 212 50 256 50z"/>
+    <path id="neck" d="M208 442h96v46a20 20 0 0 1-20 20h-56a20 20 0 0 1-20-20z"/>
+    <path id="finial" d="M256 20c11 0 19 9 21 20l5 22h-52l5-22c2-11 10-20 21-20z"/>
   </defs>
 
-  <!-- sticker drop shadow: a plain offset copy, so no SVG filters are needed -->
-  <g transform="translate(9 13)" opacity="0.28">
-    <path d="M212 66h88a16 16 0 0 1 16 16v34h-120V82a16 16 0 0 1 16-16z" fill="#000"/>
-    <path d="M256 106c74 0 118 26 118 74v170c0 54-40 88-118 88s-118-34-118-88V180c0-48 44-74 118-74z" fill="#000"/>
+  <!-- sticker shadow: an offset copy, so no SVG filters are needed -->
+  <g transform="translate(8 12)" opacity="0.24">
+    <use href="#neck" fill="#000"/><use href="#skull" fill="#000"/><use href="#finial" fill="#000"/>
   </g>
 
-  <!-- white sticker border, drawn as fat strokes under the artwork; the
-       darker pass underneath keeps the sticker readable on a white page -->
-  <g fill="none" stroke="#d9c9a0" stroke-width="44" stroke-linejoin="round" stroke-linecap="round">
-    <path d="M212 66h88a16 16 0 0 1 16 16v34h-120V82a16 16 0 0 1 16-16z"/>
-    <path d="M256 106c74 0 118 26 118 74v170c0 54-40 88-118 88s-118-34-118-88V180c0-48 44-74 118-74z"/>
+  <!-- sticker cutout: fat strokes under the artwork, warm pass first so the
+       outline still reads against a white page -->
+  <g fill="none" stroke="#d9c9a0" stroke-width="46" stroke-linejoin="round">
+    <use href="#neck"/><use href="#skull"/><use href="#finial"/>
   </g>
-  <g fill="none" stroke="#fffdf5" stroke-width="34" stroke-linejoin="round" stroke-linecap="round">
-    <path d="M212 66h88a16 16 0 0 1 16 16v34h-120V82a16 16 0 0 1 16-16z"/>
-    <path d="M256 106c74 0 118 26 118 74v170c0 54-40 88-118 88s-118-34-118-88V180c0-48 44-74 118-74z"/>
+  <g fill="none" stroke="#fffdf5" stroke-width="34" stroke-linejoin="round">
+    <use href="#neck"/><use href="#skull"/><use href="#finial"/>
   </g>
 
-  <!-- stud on top of the minifig head -->
-  <path d="M212 66h88a16 16 0 0 1 16 16v34h-120V82a16 16 0 0 1 16-16z" fill="url(#goldStud)"/>
-  <ellipse cx="256" cy="66" rx="44" ry="13" fill="#ffeeb5"/>
+  <!-- neck cylinder, behind the head -->
+  <use href="#neck" fill="url(#neckGrad)"/>
+  <g stroke="#6d4708" stroke-width="6" stroke-linecap="round" opacity="0.75">
+    <path d="M212 466h88"/><path d="M214 490h80"/>
+  </g>
 
-  <!-- ear discs, tucked behind the head -->
-  <g fill="#c98f1c">
-    <rect x="112" y="228" width="34" height="76" rx="12"/>
-    <rect x="366" y="228" width="34" height="76" rx="12"/>
+  <!-- crest at the apex -->
+  <use href="#finial" fill="url(#goldEdge)" stroke="#7d520c" stroke-width="4"/>
+  <g stroke="#8a5b0d" stroke-width="3" stroke-linecap="round" opacity="0.7">
+    <path d="M247 30v24"/><path d="M265 30v24"/>
   </g>
 
   <!-- head -->
-  <path d="M256 106c74 0 118 26 118 74v170c0 54-40 88-118 88s-118-34-118-88V180c0-48 44-74 118-74z" fill="url(#gold)" stroke="#8a5b0d" stroke-width="5" stroke-opacity="0.55"/>
+  <use href="#skull" fill="url(#gold)" stroke="#7d520c" stroke-width="5" stroke-opacity="0.65"/>
 
-  <!-- soft highlight down the left cheek -->
-  <path d="M176 150c-16 20-22 44-22 74v128c0 22 6 40 18 54-30-18-40-44-40-76V186c0-16 16-30 44-36z" fill="#fff8dc" opacity="0.35"/>
+  <!-- raised rim along the crown -->
+  <path d="M256 72c36 0 66 30 88 82 28 62 50 100 54 138" fill="none" stroke="#fff2c6" stroke-width="8" opacity="0.5" stroke-linecap="round"/>
+  <path d="M256 72c-36 0-66 30-88 82-28 62-50 100-54 138" fill="none" stroke="#8a5b0d" stroke-width="8" opacity="0.3" stroke-linecap="round"/>
 
-  <!-- brow plate -->
-  <path d="M150 196c30-16 66-24 106-24s76 8 106 24v20c-30-16-66-24-106-24s-76 8-106 24z" fill="#b07c15" opacity="0.75"/>
+  <!-- broad specular sweep down the left of the dome -->
+  <path d="M212 92c-24 22-44 58-64 104-26 58-46 96-50 140-4 44 12 86 44 114-44-30-70-78-64-136 4-42 28-84 58-152 14-32 34-60 76-70z" fill="#fff8dc" opacity="0.3"/>
 
-  <!-- eyes -->
+  <!-- ribbed temple panels, set inside the outer edge -->
+  <g stroke="#96660e" stroke-width="9" stroke-linecap="round" opacity="0.6">
+    <path d="M102 262h34"/><path d="M100 296h34"/><path d="M106 330h34"/><path d="M118 362h32"/>
+    <path d="M376 262h34"/><path d="M378 296h34"/><path d="M372 330h34"/><path d="M362 362h32"/>
+  </g>
+
+  <!-- hooded brows: heavy, pointed at the outer corners -->
+  <path d="M112 290c-2-58 32-96 76-96 36 0 62 22 74 60l-22 14c-10-28-28-44-52-44-32 0-54 28-52 74z" fill="#a06c0d"/>
+  <path d="M400 290c2-58-32-96-76-96-36 0-62 22-74 60l22 14c10-28 28-44 52-44 32 0 54 28 52 74z" fill="#a06c0d"/>
+
+  <!-- eyes: lit lenses with vertical grille lines and a small pupil -->
   <g>
-    <circle cx="206" cy="248" r="42" fill="url(#plate)"/>
-    <circle cx="306" cy="248" r="42" fill="url(#plate)"/>
-    <circle cx="206" cy="248" r="29" fill="url(#eyeGlow)"/>
-    <circle cx="306" cy="248" r="29" fill="url(#eyeGlow)"/>
-    <circle cx="197" cy="238" r="9" fill="#fffdf0" opacity="0.9"/>
-    <circle cx="297" cy="238" r="9" fill="#fffdf0" opacity="0.9"/>
+    <circle cx="180" cy="292" r="60" fill="#523206"/>
+    <circle cx="332" cy="292" r="60" fill="#523206"/>
+    <circle cx="180" cy="292" r="50" fill="url(#lens)"/>
+    <circle cx="332" cy="292" r="50" fill="url(#lens)"/>
+    <g stroke="#8a4408" stroke-width="4" opacity="0.5">
+      <path d="M150 256v72"/><path d="M165 248v88"/><path d="M180 246v92"/>
+      <path d="M195 248v88"/><path d="M210 256v72"/>
+      <path d="M302 256v72"/><path d="M317 248v88"/><path d="M332 246v92"/>
+      <path d="M347 248v88"/><path d="M362 256v72"/>
+    </g>
+    <circle cx="180" cy="292" r="50" fill="none" stroke="#e8bf5a" stroke-width="8"/>
+    <circle cx="332" cy="292" r="50" fill="none" stroke="#e8bf5a" stroke-width="8"/>
+    <circle cx="180" cy="292" r="9" fill="#1f1403"/>
+    <circle cx="332" cy="292" r="9" fill="#1f1403"/>
   </g>
 
-  <!-- cheek seams -->
-  <g stroke="#a06d10" stroke-width="7" stroke-linecap="round" opacity="0.6">
-    <path d="M160 300c8 26 10 50 8 74"/>
-    <path d="M352 300c-8 26-10 50-8 74"/>
-  </g>
+  <!-- ridge between the eyes -->
+  <path d="M246 224h20l5 66h-30z" fill="#e8bf5a" opacity="0.38"/>
 
-  <!-- mouth grille -->
-  <rect x="192" y="326" width="128" height="52" rx="16" fill="url(#plate)"/>
-  <g stroke="#e8b73a" stroke-width="7" stroke-linecap="round" opacity="0.85">
-    <path d="M212 338v28"/>
-    <path d="M234 338v28"/>
-    <path d="M256 338v28"/>
-    <path d="M278 338v28"/>
-    <path d="M300 338v28"/>
-  </g>
+  <!-- inverted-V nose, with the strip running down to the mouth -->
+  <path d="M256 344l-56 38 11 21 45-30 45 30 11-21z" fill="#c78a1b" stroke="#7d520c" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M243 382h26v38h-26z" fill="#d69c25" stroke="#7d520c" stroke-width="4" stroke-linejoin="round"/>
 
-  <!-- chin plate -->
-  <path d="M198 400c18 8 38 12 58 12s40-4 58-12" fill="none" stroke="#a06d10" stroke-width="8" stroke-linecap="round" opacity="0.55"/>
+  <!-- jaw band sweeping ear to ear -->
+  <path d="M118 384c36 40 84 60 138 60s102-20 138-60" fill="none" stroke="#e8bf5a" stroke-width="10" opacity="0.7"/>
+  <path d="M118 384c36 40 84 60 138 60s102-20 138-60" fill="none" stroke="#7d520c" stroke-width="3" opacity="0.45"/>
+
+  <!-- mouth: a small slot with a metal bezel, not a wide grille -->
+  <rect x="220" y="414" width="72" height="30" rx="7" fill="url(#goldEdge)" stroke="#7d520c" stroke-width="4"/>
+  <rect x="230" y="422" width="52" height="14" rx="4" fill="#1c1204"/>
+
+  <!-- ear discs low on the sides -->
+  <g>
+    <circle cx="146" cy="392" r="23" fill="url(#goldEdge)" stroke="#7d520c" stroke-width="4"/>
+    <circle cx="366" cy="392" r="23" fill="url(#goldEdge)" stroke="#7d520c" stroke-width="4"/>
+    <circle cx="146" cy="392" r="10" fill="#4a330b" opacity="0.8"/>
+    <circle cx="366" cy="392" r="10" fill="#4a330b" opacity="0.8"/>
+  </g>
 </svg>
