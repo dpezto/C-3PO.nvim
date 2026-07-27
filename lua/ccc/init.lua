@@ -22,9 +22,7 @@ local function setup(user_opts)
   end
 
   local core = require("ccc.core").new()
-  vim.api.nvim_create_user_command("CccPick", function()
-    core:pick()
-  end, {})
+  require("ccc.command").create(core)
   vim.keymap.set("i", "<Plug>(ccc-insert)", function()
     core:insert()
   end)
@@ -36,25 +34,8 @@ local function setup(user_opts)
     require("ccc.select").select("o")
   end)
 
-  vim.api.nvim_create_user_command("CccConvert", function()
-    require("ccc.convert").toggle()
-  end, {})
-
   local highlighter = require("ccc.highlighter")
   highlighter:init()
-
-  vim.api.nvim_create_user_command("CccHighlighterEnable", function(opt)
-    local bufnr = tonumber(opt.args)
-    highlighter:enable(bufnr)
-  end, { nargs = "?" })
-  vim.api.nvim_create_user_command("CccHighlighterDisable", function(opt)
-    local bufnr = tonumber(opt.args)
-    highlighter:disable(bufnr)
-  end, { nargs = "?" })
-  vim.api.nvim_create_user_command("CccHighlighterToggle", function(opt)
-    local bufnr = tonumber(opt.args)
-    highlighter:toggle(bufnr)
-  end, { nargs = "?" })
 
   if opts.highlighter.auto_enable then
     vim.api.nvim_create_autocmd("BufEnter", {

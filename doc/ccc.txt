@@ -288,7 +288,7 @@ Default: {
 	ccc.picker.css_oklab,
 	ccc.picker.css_oklch,
 }
-	List of formats that can be detected by |:CccPick| to be activated.
+	List of formats that can be detected by |:Ccc-pick| to be activated.
 	The presets currently available are as follows:
 		- HEX       ccc.picker.hex
 		            ccc.picker.hex_long (#RRGGBB, #RRGGBBAA)
@@ -325,7 +325,7 @@ Default: {
 	})
 <
 	This makes it highlight words both `red` and `green` to supplied RGB
-	colors. Also you can use them in |:CccPick|.
+	colors. Also you can use them in |:Ccc-pick|.
 
 	It detects word boundaries not to highlight words including supplied
 	characters. So it does not highlight `red` in `Alfred`. This is achieved
@@ -441,14 +441,14 @@ lsp ~
 boolean
 Default: true
 	Whether to enable nvim-lsp support. The color information is updated
-	in the background and the result is used by |:CccPick| and
+	in the background and the result is used by |:Ccc-pick| and
 	highlighter.
 
 
                                                         *ccc-option-highlighter*
 highlighter ~
 table
-	These are settings for CccHighlighter.
+	These are settings for |:Ccc-highlighter|.
 
 
                                             *ccc-option-highlighter-auto_enable*
@@ -525,7 +525,7 @@ table
 recognize.input ~
 boolean
 Default: false
-	If true, doing |:CccPick|, it recognizes the color format and
+	If true, doing |:Ccc-pick|, it recognizes the color format and
 	automatically adjusts the input to it. If that format is not
 	registered in |ccc-option-inputs|, it will fall back to the first one.
 
@@ -534,7 +534,7 @@ Default: false
 recognize.output ~
 boolean
 Default: false
-	If true, doing |:CccPick|, it recognizes the color format and
+	If true, doing |:Ccc-pick|, it recognizes the color format and
 	automatically adjusts the output to it. If that format is not
 	registered in |ccc-option-outputs|, it will fall back to the first one.
 
@@ -591,21 +591,28 @@ Default: See |ccc-action|
 Command                                                            *ccc-command*
 
 
-                                                                      *:CccPick*
-:CccPick
+                                                                         *:Ccc*
+:Ccc [{subcommand}] [{args}]
+	Entry point for every ccc command. With no subcommand it opens a
+	picker listing them. Subcommands and their arguments complete with
+	<Tab>.
+
+
+                                                                    *:Ccc-pick*
+:Ccc pick
 	Detects and replaces the color under the cursor. Detectable formats
 	are defined in |ccc-option-pickers|. If nothing is detected, the color
 	is inserted at a cursor position.
 
 
-                                                                   *:CccConvert*
-:CccConvert
+                                                                 *:Ccc-convert*
+:Ccc convert
 	Convert color formats directly without opening the UI. The conversion
 	rules are specified in |ccc-option-convert|.
 
 
-                                                         *:CccHighlighterEnable*
-:CccHighlighterEnable [{bufnr}]
+                                                             *:Ccc-highlighter*
+:Ccc highlighter enable [{bufnr}]
 	Highlight colors in the buffer {bufnr}. If {bufnr} is omitted, the
 	target is the current buffer. The colors to be highlighted are those
 	returned by textDocument/documentColor request or those registered in
@@ -620,14 +627,10 @@ Command                                                            *ccc-command*
 		|ccc-option-highlighter-excludes|
 		|ccc-option-highlighter-lsp|
 
-
-                                                        *:CccHighlighterDisable*
-:CccHighlighterDisable [{bufnr}]
+:Ccc highlighter disable [{bufnr}]
 	Disable highlight.
 
-
-                                                         *:CccHighlighterToggle*
-:CccHighlighterToggle [{bufnr}]
+:Ccc highlighter toggle [{bufnr}]
 	Toggle highlight.
 
 
