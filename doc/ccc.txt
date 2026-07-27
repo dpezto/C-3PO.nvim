@@ -32,7 +32,7 @@ Features:
 - Programmable modules (input/output/picker)
 
 Requirements:
-- Neovim 0.9.0+
+- Neovim 0.12+
 
 
 
@@ -54,7 +54,6 @@ See |ccc-options| for the options that can be used.
 	  -- Example: enable highlighter
 	  highlighter = {
 	    auto_enable = true,
-	    lsp = true,
 	  },
 	})
 <
@@ -251,14 +250,18 @@ Default: { "hex", "hex_short", "css_rgb", "css_hsl" }
 		- CssOKLCH          "css_oklch"
 		- Float             "float"
 		- LatexRGB          "latex_rgb"
+		- Latexrgb          "latex_rgb_float"
 		- LatexCMYK         "latex_cmyk"
 		- LatexHTML         "latex_html"
+		- Latexgray         "latex_gray"
 
 	Latex* emit the model and arguments of an xcolor color specification,
 	for use with \definecolor and \color.
 		LatexRGB    {RGB}{255, 0, 0}
+		Latexrgb    {rgb}{1.000, 0.000, 0.000}
 		LatexCMYK   {cmyk}{0.000, 1.000, 1.000, 0.000}
 		LatexHTML   {HTML}{FF0000}
+		Latexgray   {gray}{0.300}
 
 	ccc.output.hex and ccc.output.hex_short use lowercase (e.g. #ffffff)
 	by default, but can be set to use uppercase letters.
@@ -289,13 +292,18 @@ Default: {
 		- CssOKLCH  "css_oklch",
 		- CssName   "css_name"
 		- Defaults  "defaults" (Neovim default colorscheme)
-		- LatexRGB  "latex_rgb" ({RGB}{...}, {rgb}{...})
-		- LatexCMYK "latex_cmyk" ({cmyk}{...})
-		- LatexHTML "latex_html" ({HTML}{...})
+		- Latex     "latex" (every xcolor model: {RGB}, {rgb},
+		            {HTML}, {cmyk}, {cmy}, {hsb}, {HSB}, {gray},
+		            {Gray})
+		            "latex_rgb", "latex_cmyk", "latex_html"
+		            (single-model views, for |ccc-option-convert|
+		            cycles)
 	Css* conforms to CSS Color Module Level 4.
 	https://www.w3.org/TR/css-color-4/
-	Latex* detect the xcolor color models, with or without a surrounding
-	\definecolor.
+	"latex" detects xcolor color specifications, with or without a
+	surrounding \definecolor. Use the single-model views in a convert
+	cycle so each latex format converts to the next one instead of to
+	itself.
 
 
 					     *ccc-option-pickers-custom_entries*
@@ -427,9 +435,10 @@ Default: "inline-left"
 lsp ~
 boolean
 Default: true
-	Whether to enable nvim-lsp support. The color information is updated
-	in the background and the result is used by |:Ccc-pick| and
-	highlighter.
+	Whether |:Ccc-pick| and |:Ccc-yank| ask the attached language servers
+	for the color under the cursor before trying |ccc-option-pickers|.
+	Buffer highlighting of LSP colors is not ccc's job anymore: Neovim
+	does it natively, see |vim.lsp.document_color|.
 
 
                                                         *ccc-option-highlighter*
@@ -442,7 +451,10 @@ table
 highlighter.auto_enable ~
 boolean
 Default: false
-	Whether to enable automatically on BufEnter.
+	Whether to enable automatically when a buffer gets a filetype. Only
+	normal buffers are picked up: terminals, prompts and plugin scratch
+	buffers ('buftype' is not empty) never are, nor are buffers without a
+	filetype.
 
 
                                                *ccc-option-highlighter-max_byte*
@@ -468,15 +480,6 @@ string[]
 Default: {}
 	Used only when |ccc-option-highlighter-filetypes| is empty table. You
 	can specify file types to be excludes.
-
-
-                                                    *ccc-option-highlighter-lsp*
-highlighter.lsp ~
-boolean
-Default: true
-	If true, highlight using nvim-lsp. If LS with the color provider is
-	not attached to a buffer, it falls back to highlight with pickers.
-	See also |ccc-option-lsp|.
 
 
                                           *ccc-option-highlighter-update_insert*
@@ -605,21 +608,27 @@ Command                                                            *ccc-command*
 	rules are specified in |ccc-option-convert|.
 
 
+                                                                    *:Ccc-yank*
+:Ccc yank [{output}]
+	Yank the color under the cursor without touching the buffer. The
+	color is formatted with {output} (any output preset name, e.g.
+	"css_hsl"); if omitted, the first entry of |ccc-option-outputs| is
+	used. The result goes to |v:register|.
+
+
                                                              *:Ccc-highlighter*
 :Ccc highlighter enable [{bufnr}]
 	Highlight colors in the buffer {bufnr}. If {bufnr} is omitted, the
 	target is the current buffer. The colors to be highlighted are those
-	returned by textDocument/documentColor request or those registered in
-	|ccc-option-pickers|.
+	registered in |ccc-option-pickers|; colors reported by language
+	servers are highlighted natively by |vim.lsp.document_color|.
 	Highlight is managed on a buffer-by-buffer basis, so you must use this
 	command each time to enable highlight on a new buffer. You can use
-	|ccc-option-highlighter-auto-enable| to enable automatically on
-	|BufEnter|.
+	|ccc-option-highlighter-auto-enable| to enable automatically.
 	The following options are available.
 		|ccc-option-highlighter-auto-enable|
 		|ccc-option-highlighter-filetypes|
 		|ccc-option-highlighter-excludes|
-		|ccc-option-highlighter-lsp|
 
 :Ccc highlighter disable [{bufnr}]
 	Disable highlight.
