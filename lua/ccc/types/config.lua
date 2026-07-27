@@ -2,6 +2,8 @@
 ---@field default_color string hex
 ---@field bar_char string
 ---@field point_char string
+---@field bar_cap_start string
+---@field bar_cap_end string
 ---@field point_color string hex
 ---@field empty_point_bg boolean
 ---@field point_color_on_dark string hex
@@ -51,6 +53,8 @@
 ---@field default_color? string hex
 ---@field bar_char? string
 ---@field point_char? string
+---@field bar_cap_start? string
+---@field bar_cap_end? string
 ---@field point_color? string hex
 ---@field empty_point_bg? boolean
 ---@field point_color_on_dark? string hex

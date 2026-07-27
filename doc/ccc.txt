@@ -76,15 +76,45 @@ Default: "#000000"
                                                            *ccc-option-bar-char*
 bar_char ~
 string
-Default: "█"
+Default: "━"
 	The character used for the sliders.
 
 
                                                          *ccc-option-point-char*
 point_char ~
 string
-Default: "◊"
+Default: "█"
 	The character used for the cursor point on the sliders.
+
+
+                                                      *ccc-option-bar-cap-start*
+                                                        *ccc-option-bar-cap-end*
+bar_cap_start ~
+bar_cap_end ~
+string
+Default: "" (both)
+	The characters used for the first and last cell of the sliders, giving
+	them rounded ends so they read more like a physical slider. Both empty
+	by default, in which case bar_char is used there like anywhere else.
+
+	These are the first and last cells of the bar, not extra decoration
+	around it: they carry a value like every other cell, so the slider
+	stays bar_len cells wide and the point still reaches them. When the
+	point is at either extreme, point_char is drawn there instead.
+
+	Neovim cannot ask the terminal which glyphs the font actually has, so
+	this is opt-in rather than detected. Only set it if your font provides
+	the glyphs; otherwise you get tofu at both ends.
+
+	Nerd Font (and Fira Code) ship a slider set for exactly this:
+>lua
+	require("ccc").setup({
+		bar_cap_start = "\u{ee03}",
+		bar_char      = "\u{ee04}",
+		bar_cap_end   = "\u{ee05}",
+		point_char    = "█",
+	})
+<
 
 
                                                         *ccc-option-point-color*
@@ -227,6 +257,15 @@ Default: {
 		- CssOKLab          ccc.output.css_oklab
 		- CssOKLCH          ccc.output.css_oklch
 		- Float             ccc.output.float
+		- LatexRGB          ccc.output.latex_rgb
+		- LatexCMYK         ccc.output.latex_cmyk
+		- LatexHTML         ccc.output.latex_html
+
+	Latex* emit the model and arguments of an xcolor color specification,
+	for use with \definecolor and \color.
+		LatexRGB    {RGB}{255, 0, 0}
+		LatexCMYK   {cmyk}{0.000, 1.000, 1.000, 0.000}
+		LatexHTML   {HTML}{FF0000}
 
 	ccc.output.hex and ccc.output.hex_short use lowercase (e.g. #ffffff)
 	by default, but can be set to use uppercase letters.
@@ -263,8 +302,13 @@ Default: {
 		- CssOKLCH  ccc.picker.css_oklch,
 		- CssName   ccc.picker.css_name
 		- Defaults  ccc.picker.defaults (Neovim default colorscheme)
+		- LatexRGB  ccc.picker.latex_rgb ({RGB}{...}, {rgb}{...})
+		- LatexCMYK ccc.picker.latex_cmyk ({cmyk}{...})
+		- LatexHTML ccc.picker.latex_html ({HTML}{...})
 	Css* conforms to CSS Color Module Level 4.
 	https://www.w3.org/TR/css-color-4/
+	Latex* detect the xcolor color models, with or without a surrounding
+	\definecolor.
 
 
 					     *ccc-option-pickers-custom_entries*
@@ -779,8 +823,22 @@ mapping.set0()
 mapping.set50()
 mapping.set100()
 ccc.set_percent(integer)
-Default mapping: H / M / L (0 / 50 / 100), 1 - 9 (10% - 90%)
+Default mapping: H / M / L (0 / 50 / 100), 0 - 9 (0% - 90%), $ (100%)
 	Set the value of the slider as a percentage.
+	The digit row only reaches 90%; use $ or L for 100%.
+
+
+                                                             *ccc-action-click*
+click ~
+mapping.click()
+Default mapping: <LeftMouse>
+	Set the slider under the mouse to the clicked position. Clicking the
+	first or last cell selects the minimum or maximum; every other cell
+	selects the value it is colored with.
+
+	The cursor stays on the labels rather than following the mouse onto
+	the bar, so the float never scrolls sideways. On the previous colors
+	row the click selects the color under the mouse instead.
 
 
 vim:tw=78:ts=8:noet:ft=help:norl:

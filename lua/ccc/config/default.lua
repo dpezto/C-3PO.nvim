@@ -8,8 +8,10 @@ local utils = require("ccc.utils")
 ---@type ccc.Options
 return {
   default_color = "#000000",
-  bar_char = "█",
-  point_char = "◊",
+  bar_char = "━",
+  point_char = "█",
+  bar_cap_start = "",
+  bar_cap_end = "",
   point_color = "",
   empty_point_bg = true,
   point_color_on_dark = "#ffffff",
@@ -119,6 +121,9 @@ return {
     ["7"] = utils.bind(mapping._set_percent, 70),
     ["8"] = utils.bind(mapping._set_percent, 80),
     ["9"] = utils.bind(mapping._set_percent, 90),
+    -- The digit row stops at 90%; $ completes it, and is otherwise a no-op
+    -- since the cursor is pinned to the labels.
+    ["$"] = mapping.set100,
     ["r"] = mapping.reset_mode,
     ["a"] = mapping.toggle_alpha,
     ["g"] = mapping.toggle_prev_colors,

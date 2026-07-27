@@ -63,6 +63,31 @@ for _, percent in ipairs({ 0, 50, 100 }) do
   M["set" .. percent] = utils.bind(M._set_percent, percent)
 end
 
+---Set the clicked slider to the value under the mouse.
+---@param core ccc.Core
+function M.click(core)
+  local pos = vim.fn.getmousepos()
+  if pos.winid ~= core.ui.winid or pos.line == 0 then
+    return
+  end
+  local api = require("ccc.utils.api")
+  local row, col = pos.line - 1, math.max(pos.column - 1, 0)
+  -- Park the cursor on the label rather than where the mouse landed. A slider
+  -- is identified by its row alone, and leaving the cursor out on the bar
+  -- scrolls the float sideways.
+  api.set_cursor(row, 0)
+  -- Previous colors are the one row where the column selects something.
+  if core.ui:point_at().type == "prev" then
+    api.set_cursor(row, col)
+    return
+  end
+  local ratio = core.ui:ratio_at(row, col)
+  if ratio == nil then
+    return
+  end
+  M._set_percent(ratio * 100, core)
+end
+
 ---@param core ccc.Core
 function M.show_alpha(core)
   core.color.alpha:show()

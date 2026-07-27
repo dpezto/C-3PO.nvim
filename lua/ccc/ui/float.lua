@@ -66,6 +66,20 @@ function UI:open(color, prev_colors)
       once = true,
     })
   end
+  -- Keep the cursor on the labels. A slider is identified by its row, so there
+  -- is nothing to point at further right, and a cursor out on a bar scrolls the
+  -- float sideways. Previous colors are the exception: there the column picks
+  -- which color is selected.
+  vim.api.nvim_create_autocmd("CursorMoved", {
+    buffer = self.bufnr,
+    group = self.augroup,
+    callback = function()
+      local row, col = api.get_cursor()
+      if col ~= 0 and self:point_at().type ~= "prev" then
+        api.set_cursor(row, 0)
+      end
+    end,
+  })
 end
 
 function UI:update()
@@ -125,6 +139,37 @@ function UI:reset_view()
   self:update()
 end
 
+---Where along a slider a byte column falls.
+---Counts characters in the rendered line rather than assuming a cell width, so
+---it stays correct whatever bar_char, point_char and the caps are set to.
+---@param row integer 0-indexed
+---@param byte_col integer 0-indexed
+---@return number? ratio #0-1, or nil when the column is not on the slider
+function UI:ratio_at(row, byte_col)
+  local opts = require("ccc.config").options
+  local bar_start = #self.color:input().bar_name[1] + 10
+  if byte_col < bar_start then
+    return
+  end
+  local line = vim.api.nvim_buf_get_lines(self.bufnr, row, row + 1, false)[1]
+  if line == nil then
+    return
+  end
+  local cell = vim.fn.strchars(line:sub(bar_start + 1, byte_col)) + 1
+  if cell > opts.bar_len then
+    return
+  end
+  -- The end cells snap to the extremes so the whole range stays clickable;
+  -- every other cell maps to the value it is coloured with, so clicking a cell
+  -- selects the colour that cell is showing and puts the point back on it.
+  if cell == 1 then
+    return 0
+  elseif cell == opts.bar_len then
+    return 1
+  end
+  return (cell - 0.5) / opts.bar_len
+end
+
 function UI:point_at()
   local row, col = api.get_cursor()
   local num_color = #self.color:input():get()
@@ -154,10 +199,37 @@ end
 ---@param value number
 ---@param min number
 ---@param max number
----@return integer
+---@return integer #1-indexed cell holding the point
 local function adjust2bar(value, min, max)
   local opts = require("ccc.config").options
-  return utils.round((value - min) / (max - min) * opts.bar_len)
+  local idx = utils.round((value - min) / (max - min) * opts.bar_len)
+  -- A value at min rounds to 0, which is not a cell. Clamping here keeps the
+  -- rendered bar and the highlight ranges agreeing on where the point is.
+  return utils.clamp(idx, 1, opts.bar_len)
+end
+
+---The characters making up one slider, one per cell.
+---Both the rendered text and the highlight ranges are derived from this, so
+---they cannot disagree about which character (and byte width) sits in a cell.
+---@param point_idx integer
+---@return string[] cells
+local function bar_cells(point_idx)
+  local opts = require("ccc.config").options
+  local cells = {}
+  for i = 1, opts.bar_len do
+    cells[i] = opts.bar_char
+  end
+  -- The caps are the first and last cells of the bar, not extra decoration
+  -- around it: they carry a value like every other cell, and only the glyph
+  -- differs. So the point still reaches them and takes precedence there.
+  if opts.bar_cap_start ~= "" then
+    cells[1] = opts.bar_cap_start
+  end
+  if opts.bar_cap_end ~= "" then
+    cells[opts.bar_len] = opts.bar_cap_end
+  end
+  cells[point_idx] = opts.point_char
+  return cells
 end
 
 ---@param value number
@@ -165,12 +237,7 @@ end
 ---@param max number
 ---@return string
 local function create_bar(value, min, max)
-  local opts = require("ccc.config").options
-  local point_idx = adjust2bar(value, min, max)
-  if point_idx == 0 then
-    return opts.point_char .. opts.bar_char:rep(opts.bar_len - 1)
-  end
-  return opts.bar_char:rep(point_idx - 1) .. opts.point_char .. opts.bar_char:rep(opts.bar_len - point_idx)
+  return table.concat(bar_cells(adjust2bar(value, min, max)))
 end
 
 ---@private
@@ -230,14 +297,10 @@ function UI:highlight(width)
     -- {bar_name} + " : " + {formatted_value} + " "
     -- {formatted_value} is must be 6 byte (See `ccc.ColorInput.format()`)
     -- So, +10 (0-indexed)
+    local cells = bar_cells(point_idx)
     local start_col, end_col = bar_name_len + 10, 0
     for j = 1, opts.bar_len do
-      -- Update end_
-      if j == point_idx then
-        end_col = start_col + #opts.point_char
-      else
-        end_col = start_col + #opts.bar_char
-      end
+      end_col = start_col + #cells[j]
       -- Calculate a new color for highlight of a slider
       local new_value = (j - 0.5) / opts.bar_len * (max - min) + min
       local hex = self.color:hex(i, new_value)
@@ -269,14 +332,10 @@ function UI:highlight(width)
     row = row + 1
     local point_idx = adjust2bar(alpha, 0, 1)
 
+    local cells = bar_cells(point_idx)
     local start_col, end_col = bar_name_len + 10, 0
     for i = 1, opts.bar_len do
-      -- Update end_
-      if i == point_idx then
-        end_col = start_col + #opts.point_char
-      else
-        end_col = start_col + #opts.bar_char
-      end
+      end_col = start_col + #cells[i]
       -- Calculate a new color for highlight of an alpha slider
       local alpha_ratio = (i - 0.5) / opts.bar_len
       local hex = self.color.alpha:hex(alpha_ratio)
@@ -288,7 +347,7 @@ function UI:highlight(width)
             bg = hex,
           }
         end
-        if opts.point_char ~= "" then
+        if opts.point_color ~= "" then
           hl.fg = opts.point_color
         end
       end
