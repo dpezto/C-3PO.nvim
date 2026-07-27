@@ -420,4 +420,157 @@ describe("Color detection test", function()
       test_rgb(latex, " {RGB}{255, 0, 0} ", { 255, 0, 0 }, nil)
     end)
   end)
+  describe("LaTeX named colors", function()
+    local latex_name = require("c3po.picker.latex_name")
+    local AZUL = { 0, 112 / 255, 192 / 255 }
+    local real_names, saved_ft
+
+    before_each(function()
+      -- The name table is the seam: stubbing it keeps every case below off the
+      -- filesystem and independent of the project this test happens to run in.
+      real_names = latex_name.names
+      latex_name.names = function()
+        return { azulUNAM = AZUL }
+      end
+      saved_ft = vim.bo.filetype
+      vim.bo.filetype = "tex"
+    end)
+
+    after_each(function()
+      latex_name.names = real_names
+      vim.bo.filetype = saved_ft
+    end)
+
+    ---@param s string
+    ---@return string? #The matched text, nil when nothing matched
+    local function span(s)
+      local start, end_ = latex_name:parse_color(s)
+      if start and end_ then
+        return s:sub(start, end_)
+      end
+    end
+
+    it("scans every model \\definecolor accepts", function()
+      local names = latex_name.scan_lines({
+        [[\definecolor{azulUNAM}{RGB}{0, 112, 192}]],
+        [[\definecolor[ps]{oro}{HTML}{FFD700}]],
+        [[\providecolor{medio}{gray}{0.5}]],
+      })
+      assert.is_true(utils.near(112 / 255, names.azulUNAM[2], 1 / 255))
+      assert.is_true(utils.near(215 / 255, names.oro[2], 1 / 255))
+      assert.same({ 0.5, 0.5, 0.5 }, names.medio)
+    end)
+
+    it("refuses the named model without stealing a later specification", function()
+      local names = latex_name.scan_lines({
+        [[\definecolor{a}{named}{Blue} \definecolor{b}{RGB}{255, 0, 0}]],
+      })
+      assert.is_nil(names.a)
+      assert.same({ 1, 0, 0 }, names.b)
+    end)
+
+    it("pairs several definitions on one line", function()
+      local names = latex_name.scan_lines({
+        [[\definecolor{a}{gray}{0} \definecolor{b}{gray}{1}]],
+      })
+      assert.same({ 0, 0, 0 }, names.a)
+      assert.same({ 1, 1, 1 }, names.b)
+    end)
+
+    it("spans the bare name at the definition site", function()
+      assert.equals("azulUNAM", span([[\definecolor{azulUNAM}{RGB}{0, 112, 192}]]))
+    end)
+
+    it("matches the commands that take a color name", function()
+      assert.equals("azulUNAM", span([[\textcolor{azulUNAM}{x}]]))
+      assert.equals("azulUNAM", span([[{\color{azulUNAM} x}]]))
+      assert.equals("azulUNAM", span([[\colorbox{azulUNAM}{x}]]))
+      assert.equals("azulUNAM", span([[\cellcolor{azulUNAM}]]))
+      -- \colorlet defines its first argument and reads its second; only the
+      -- second one has a value this picker can resolve.
+      assert.equals("azulUNAM", span([[\colorlet{nuevo}{azulUNAM}]]))
+    end)
+
+    it("stops a mixing expression at the base name", function()
+      assert.equals("azulUNAM", span([[\textcolor{azulUNAM!50!white}{x}]]))
+    end)
+
+    it("keeps scanning the line past an unknown name", function()
+      local s = [[\textcolor{nope}{a} \textcolor{azulUNAM}{b}]]
+      local start, end_ = latex_name:parse_color(s)
+      assert.equals("azulUNAM", s:sub(start, end_))
+    end)
+
+    it("leaves bracketed specifications to the latex picker", function()
+      assert.is_nil(span([[\textcolor[RGB]{0, 112, 192}{x}]]))
+    end)
+
+    it("is inert outside tex buffers", function()
+      vim.bo.filetype = "lua"
+      assert.is_nil(span([[\textcolor{azulUNAM}{x}]]))
+    end)
+
+    it("highlights the name and the specification separately", function()
+      local bufnr = vim.api.nvim_create_buf(false, true)
+      vim.bo[bufnr].filetype = "tex"
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { [[\definecolor{azulUNAM}{RGB}{0, 112, 192}]] })
+      local infos = require("c3po.handler.picker").info_in_range(bufnr, 0, -1, { latex_name, latex })
+      assert.equals(2, #infos)
+      assert.same({ 0, 13, 0, 21 }, infos[1].range)
+      assert.same({ 0, 22, 0, 40 }, infos[2].range)
+      vim.api.nvim_buf_delete(bufnr, { force = true })
+    end)
+
+    it("finds the completion prefix only inside a color argument", function()
+      assert.equals(11, latex_name.arg_start([[\textcolor{az]], 13))
+      assert.equals(7, latex_name.arg_start([[\color{]], 7))
+      assert.equals(17, latex_name.arg_start([[\colorlet{nuevo}{az]], 19))
+      assert.is_nil(latex_name.arg_start([[\cite{kn]], 8))
+      assert.is_nil(latex_name.arg_start([[plain text]], 10))
+    end)
+
+    it("offers the names to blink.cmp as Color items", function()
+      local source = require("c3po.blink").new()
+      local ctx = { line = [[\textcolor{az]], cursor = { 1, 13 }, bufnr = 0 }
+      local response
+      source:get_completions(ctx, function(r)
+        response = r
+      end)
+      local item = vim.tbl_filter(function(i)
+        return i.label == "azulUNAM"
+      end, response.items)[1]
+      -- 16 is lsp.CompletionItemKind.Color.
+      assert.equals(16, item.kind)
+      assert.equals("#0070c0", item.labelDetails.description)
+      assert.same({ line = 0, character = 11 }, item.textEdit.range["start"])
+      -- The swatch follows the highlighter: no highlighting, no tinted icon.
+      assert.is_nil(item.kind_hl)
+      require("c3po.highlighter").attached_buffer[0] = true
+      source:get_completions(ctx, function(r)
+        response = r
+      end)
+      item = vim.tbl_filter(function(i)
+        return i.label == "azulUNAM"
+      end, response.items)[1]
+      assert.equals("C3Highlighterfg0070c0", item.kind_hl)
+      require("c3po.highlighter").attached_buffer[0] = nil
+
+      -- Outside a color argument the source stays out of the way.
+      source:get_completions({ line = [[\cite{kn]], cursor = { 1, 8 }, bufnr = 0 }, function(r)
+        response = r
+      end)
+      assert.is_nil(response)
+    end)
+
+    it("never feeds :C3 pick, so the name is not overwritten", function()
+      local config = require("c3po.config")
+      local saved = config.options.pickers
+      config.options.pickers = { latex_name }
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, { [[\textcolor{azulUNAM}{x}]] })
+      vim.api.nvim_win_set_cursor(0, { 1, 13 })
+      assert.is_nil(require("c3po.handler.picker").pick())
+      config.options.pickers = saved
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, {})
+    end)
+  end)
 end)

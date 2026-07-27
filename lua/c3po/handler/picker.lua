@@ -22,7 +22,13 @@ function PickerHandler.pick()
   while init <= #line do
     local start_col, end_col, RGB, A, input, output
     for _, picker in ipairs(opts.pickers) do
-      local s, e, rgb, a = picker:parse_color(line, init)
+      -- Readonly pickers match text that names a color rather than spelling one
+      -- out (xcolor's `\textcolor{azulUNAM}`). Picking would overwrite the name
+      -- with a literal, so they only ever feed the highlighter.
+      local s, e, rgb, a
+      if not picker.readonly then
+        s, e, rgb, a = picker:parse_color(line, init)
+      end
       if s and e and rgb and (start_col == nil or s < start_col) then
         start_col, end_col, RGB, A, input, output = s, e, rgb, a, nil, nil
 
@@ -65,7 +71,7 @@ function PickerHandler.info_in_range(bufnr, start_line, end_line, pickers)
       ---@type integer?, integer?, RGB?, vim.api.keyset.highlight?
       local start_col, end_col, RGB, hl_def
       for _, picker in ipairs(pickers) do
-        local s, e, rgb, _, h = picker:parse_color(line, init)
+        local s, e, rgb, _, h = picker:parse_color(line, init, bufnr)
         if s and (start_col == nil or s < start_col) then
           start_col, end_col, RGB, hl_def = s, e, rgb, h
         end

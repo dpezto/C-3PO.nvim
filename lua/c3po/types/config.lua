@@ -20,6 +20,7 @@
 ---@field pickers c3po.ColorPicker[]
 ---@field ui c3po.UI
 ---@field lsp boolean
+---@field latex_completion boolean
 ---@field output_line fun(before_color: c3po.Color, after_color: c3po.Color, width: integer): string, integer, integer, integer, integer
 ---@field highlight_mode c3po.Option.hl_mode
 ---@field virtual_symbol string
@@ -70,6 +71,7 @@
 ---@field pickers? (string|c3po.ColorPicker)[]
 ---@field ui? c3po.UI
 ---@field lsp? boolean
+---@field latex_completion? boolean
 ---@field output_line? fun(before_color: c3po.Color, after_color: c3po.Color, width: integer): string, integer, integer, integer, integer
 ---@field highlight_mode? c3po.Option.hl_mode
 ---@field virtual_symbol? string

@@ -337,12 +337,70 @@ Default: {
 		            "latex_rgb", "latex_cmyk", "latex_html"
 		            (single-model views, for |c3po-option-convert|
 		            cycles)
+	- LatexName "latex_name" (xcolor colors used by name, see
+	            |c3po-option-pickers-latex_name|)
 	Css* conforms to CSS Color Module Level 4.
 	https://www.w3.org/TR/css-color-4/
 	"latex" detects xcolor color specifications, with or without a
 	surrounding \definecolor. Use the single-model views in a convert
 	cycle so each latex format converts to the next one instead of to
 	itself.
+
+
+						 *c3po-option-pickers-latex_name*
+	"latex_name" highlights xcolor colors where they are used by name,
+	across the whole project. Given >latex
+		% preamble.tex
+		\definecolor{azulUNAM}{RGB}{0, 112, 192}
+
+		% chapter.tex
+		\textcolor{azulUNAM}{...}
+<
+	both `azulUNAM` occurrences carry the color, even though only one of
+	the files is open. Pair it with "latex" to get the specification
+	highlighted as well: >lua
+		c3po.setup({
+		  pickers = { "hex", "latex", "latex_name" },
+		})
+<
+	NOTE: This picker is only used for highlights. The span is a name,
+	not a color literal, so overwriting it with `#0070c0` would throw
+	away the indirection the document is built on. |:C3-pick| skips it,
+	and it must not appear in |c3po-option-convert|. Put the cursor on
+	the specification to pick a definition; use |:C3-yank| to read a
+	named color without touching the buffer.
+
+	Names come from three places, later ones winning: xcolor's 19 base
+	names (`red`, `teal`, `violet`, ...); every \definecolor and
+	\providecolor found in the *.tex and *.sty files under the project
+	root; and the unsaved definitions in the current buffer. The root is
+	found with .latexmkrc, latexmkrc, Tectonic.toml, .texlabroot,
+	texlabroot or .git, falling back to the file's own directory. At most
+	200 files are scanned. The scan is refreshed on |BufWritePost| and on
+	|InsertLeave|, so a definition changed in normal mode (`dd`, `:s`)
+	updates its uses on the next insert or write.
+
+	Recognised definitions:
+		- \definecolor{name}{model}{values}, for every model "latex"
+		  supports
+		- \definecolor[type]{name}{model}{values}
+		- \providecolor, and several definitions on one line
+	Recognised uses:
+		- \color, \textcolor, \colorbox, \pagecolor, \fcolorbox,
+		  \rowcolor, \cellcolor, \columncolor
+		- \colorlet{new}{old}, where `old` is the resolvable one
+		- a mixing expression highlights its base name only, so
+		  `azulUNAM!50!white` spans `azulUNAM`
+	Not supported:
+		- the `named` model (\definecolor{n}{named}{Blue}), which
+		  needs the dvipsnames/svgnames sets and their package options
+		- \colorlet as a definition source: it highlights both names
+		  when they are already known, but does not define one
+		- \definecolorset, \definecolorseries, \preparecolor
+		- definitions split across lines
+		- \input/\include following; the scan is a plain file glob
+		- \color[RGB]{0, 112, 192}, a bracket-delimited specification,
+		  which "latex" does not match either
 
 
 					     *c3po-option-pickers-custom_entries*
@@ -478,7 +536,71 @@ Default: true
 	for the color under the cursor before trying |c3po-option-pickers|.
 	Buffer highlighting of LSP colors is not c3po's job anymore: Neovim
 	does it natively, see |vim.lsp.document_color|.
+	NOTE: no LaTeX language server implements textDocument/documentColor
+	today (texlab declares no color provider), so xcolor colors always go
+	through |c3po-option-pickers|.
 
+
+                                                    *c3po-option-latex_completion*
+latex_completion ~
+boolean
+Default: false
+	Whether to complete the color names defined in the project inside
+	\textcolor{...} and friends, using the names collected by
+	|c3po-option-pickers-latex_name|.
+
+	When enabled, 'omnifunc' is wrapped rather than replaced on tex
+	buffers: outside a color argument the completion is handed back to
+	whatever function was there before, so vimtex keeps completing \cite
+	and \ref. The wrapping is scheduled, because vimtex sets 'omnifunc'
+	from its own ftplugin on the same |FileType| event.
+	NOTE: a previous 'omnifunc' set to a `v:lua.` value cannot be called
+	back and is left alone.
+
+	Wrapping 'omnifunc' covers |i_CTRL-X_CTRL-O|. A completion engine only
+	reaches it through its own omni source, and even then the items arrive
+	untyped, because the 'complete-items' `kind` field has no value that
+	means "color". blink.cmp users should register the source directly
+	instead, which needs no latex_completion at all: >lua
+		sources = {
+		  per_filetype = {
+		    tex = { inherit_defaults = true, "c3po" },
+		  },
+		  providers = {
+		    c3po = { name = "Color", module = "c3po.blink" },
+		  },
+		}
+<
+	`c3po.blink` returns ordinary LSP completion items of kind Color, so
+	they carry the same icon and highlight as the color names a language
+	server offers. The module never requires blink.cmp, so it costs
+	nothing when it is not used.
+
+	While the highlighter is enabled for the buffer, each entry also sets
+	`kind_hl`, so its icon is drawn in the color the name stands for.
+	blink's default draw honours that with no configuration. The hex on
+	the right is a fixed highlight group instead, so tinting that one too
+	takes a draw override: >lua
+		completion = {
+		  menu = {
+		    draw = {
+		      components = {
+		        label_description = {
+		          highlight = function(ctx)
+		            return ctx.item.kind_hl or "BlinkCmpLabelDescription"
+		          end,
+		        },
+		      },
+		    },
+		  },
+		}
+<
+
+	The function is also usable directly, e.g. on 'completefunc' if you
+	would rather not touch 'omnifunc' at all: >lua
+		vim.bo.completefunc =
+		  "v:lua.require'c3po.picker.latex_name'.omnifunc"
+<
 
                                                         *c3po-option-highlighter*
 highlighter ~

@@ -33,6 +33,9 @@ indebted to. The **PO** followed naturally.
     - Restore previously used colors.
     - Transparent slider for css functions (e.g. `rgb()`, `hsl()`)
     - CSS Color Level 4 and LaTeX (xcolor) formats, in both directions.
+    - Project-wide xcolor named colors: `\textcolor{azulUNAM}` carries the color
+      its `\definecolor` gives it, wherever that definition lives, with optional
+      completion of the names.
     - Yank a color in any format without touching the buffer.
     - Color Highlighter for many formats.
     - Programmable modules (input/output/picker)

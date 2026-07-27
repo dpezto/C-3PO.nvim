@@ -44,6 +44,7 @@ return {
   virtual_symbol = " ● ",
   virtual_pos = "inline-left",
   lsp = true,
+  latex_completion = false,
   highlighter = {
     auto_enable = false,
     max_byte = 100 * 1024, -- 100 KB

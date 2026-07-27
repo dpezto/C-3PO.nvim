@@ -37,6 +37,10 @@ local function setup(user_opts)
   local highlighter = require("c3po.highlighter")
   highlighter:init()
 
+  if opts.latex_completion then
+    require("c3po.picker.latex_name").setup_completion()
+  end
+
   if opts.highlighter.auto_enable then
     ---@param bufnr integer
     ---@param file string
