@@ -26,7 +26,7 @@ indebted to. The **PO** followed naturally.
 
 - Features
     - No dependency.
-    - One `:Ccc` command, with subcommands, completion and a menu.
+    - One `:C3` command, with subcommands, completion and a menu.
     - Dynamic highlighting of sliders, clickable ends, mouse and scroll support.
     - Supports more than 10 color spaces (RGB, HSL, CMYK, OKLCH, etc.).
     - Seamless input/output mode change.
@@ -40,7 +40,7 @@ indebted to. The **PO** followed naturally.
 - Requirements
     - neovim 0.12+
 
-See [doc](./doc/ccc.txt) for details.
+See [doc](./doc/c3po.txt) for details.
 
 # Install
 
@@ -48,8 +48,8 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
 {
-  "dpezto/ccc.nvim",
-  cmd = "Ccc",
+  "dpezto/C-3PO.nvim",
+  cmd = "C3",
   opts = {
     highlighter = { auto_enable = true },
   },
@@ -57,7 +57,7 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
 ```
 
 No dependencies, any plugin manager works. Nothing is set up until
-`require("ccc").setup()` runs, so pass `opts`/`config`.
+`require("c3po").setup()` runs, so pass `opts`/`config`.
 
 # Demo
 
@@ -66,21 +66,21 @@ from the tapes in [`vhs/`](./vhs) — `make demo` re-records them.
 
 ## Pick
 
-`:Ccc pick` — sliders for the color under the cursor, `i`/`o` cycle the input
+`:C3 pick` — sliders for the color under the cursor, `i`/`o` cycle the input
 color space and the output format (CSS, hex, LaTeX xcolor, ...), `a` toggle transparency.
 
 ![pick](./assets/pick.gif)
 
 ## Convert in place
 
-`:Ccc convert` — cycle the color through your configured formats without
+`:C3 convert` — cycle the color through your configured formats without
 opening the UI.
 
 ![convert](./assets/convert.gif)
 
 ## Yank in any format
 
-`:Ccc yank [output]` — grab the color under the cursor in any output format,
+`:C3 yank [output]` — grab the color under the cursor in any output format,
 buffer untouched.
 
 ![yank](./assets/yank.gif)
@@ -96,6 +96,6 @@ color (`w`/`b` walk the row when there is more than one).
 
 Highlights every configured format, xcolor specifications included. LSP colors
 (`textDocument/documentColor`) are highlighted natively by neovim's
-`vim.lsp.document_color`; ccc picks them up in `:Ccc pick` and `:Ccc yank`.
+`vim.lsp.document_color`; c3po picks them up in `:C3 pick` and `:C3 yank`.
 
 ![highlight](./assets/highlight.gif)
