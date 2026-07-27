@@ -1,5 +1,4 @@
 local ColorInput = require("ccc.input")
-local utils = require("ccc.utils")
 local convert = require("ccc.utils.convert")
 
 ---@class OkhslInput: ccc.ColorInput
@@ -11,16 +10,7 @@ local OkhslInput = setmetatable({
   bar_name = { "H", "S", "L" },
 }, { __index = ColorInput })
 
----@param n number
----@param i integer
----@return string
-function OkhslInput.format(n, i)
-  if i > 1 then
-    n = n * 100
-  end
-  n = utils.round(n)
-  return ("%6d"):format(n)
-end
+OkhslInput.format = ColorInput.format_deg_percent
 
 ---@param RGB RGB
 ---@return OKHSL

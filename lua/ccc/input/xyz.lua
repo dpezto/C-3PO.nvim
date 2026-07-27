@@ -10,9 +10,7 @@ local XyzInput = setmetatable({
   bar_name = { "X", "Y", "Z" },
 }, { __index = ColorInput })
 
-function XyzInput.format(n)
-  return ("%5.1f%%"):format(math.floor(n * 200) / 2)
-end
+XyzInput.format = ColorInput.format_percent
 
 ---@param RGB RGB
 ---@return XYZ

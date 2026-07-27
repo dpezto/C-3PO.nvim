@@ -33,10 +33,8 @@ end
 ---@param OKLab OKLab
 ---@return RGB
 function OklabInput.to_rgb(OKLab)
-  local RGB = convert.oklab2rgb(OKLab)
-  return vim.tbl_map(function(x)
-    return utils.clamp(x, 0, 1)
-  end, RGB)
+  -- convert.oklab2rgb() already clamps to [0,1].
+  return convert.oklab2rgb(OKLab)
 end
 
 return OklabInput

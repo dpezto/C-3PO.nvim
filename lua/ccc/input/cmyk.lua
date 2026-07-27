@@ -10,11 +10,7 @@ local CmykInput = setmetatable({
   bar_name = { "C", "M", "Y", "K" },
 }, { __index = ColorInput })
 
----@param n number
----@return string
-function CmykInput.format(n)
-  return ("%5.1f%%"):format(math.floor(n * 200) / 2)
-end
+CmykInput.format = ColorInput.format_percent
 
 ---@param RGB RGB
 ---@return CMYK

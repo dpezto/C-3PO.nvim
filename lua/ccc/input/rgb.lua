@@ -17,24 +17,16 @@ function RgbInput.format(n)
   return ("%6d"):format(n)
 end
 
-local function copy(t)
-  local new = {}
-  for i, v in ipairs(t) do
-    new[i] = v
-  end
-  return new
-end
-
 ---@param RGB RGB
 ---@return RGB
 function RgbInput.from_rgb(RGB)
-  return copy(RGB)
+  return { unpack(RGB) }
 end
 
 ---@param RGB RGB
 ---@return RGB
 function RgbInput.to_rgb(RGB)
-  return copy(RGB)
+  return { unpack(RGB) }
 end
 
 return RgbInput

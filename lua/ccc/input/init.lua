@@ -10,6 +10,26 @@ function ColorInput.format(n, _)
   return ("%6d"):format(n)
 end
 
+---Hue in degrees for the first channel, percentages for the rest.
+---Shared by HSL, HSV, HWB, OKHSL and OKHSV.
+---@param n number
+---@param i integer
+---@return string
+function ColorInput.format_deg_percent(n, i)
+  if i > 1 then
+    n = n * 100
+  end
+  return ("%6d"):format(utils.round(n))
+end
+
+---Every channel as a percentage with half-point resolution.
+---Shared by CMYK and XYZ.
+---@param n number
+---@return string
+function ColorInput.format_percent(n)
+  return ("%5.1f%%"):format(math.floor(n * 200) / 2)
+end
+
 function ColorInput:new()
   return setmetatable({}, { __index = self })
 end

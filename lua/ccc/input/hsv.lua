@@ -1,5 +1,4 @@
 local ColorInput = require("ccc.input")
-local utils = require("ccc.utils")
 local convert = require("ccc.utils.convert")
 
 ---@class HsvInput: ccc.ColorInput
@@ -11,16 +10,7 @@ local HsvInput = setmetatable({
   bar_name = { "H", "S", "V" },
 }, { __index = ColorInput })
 
----@param n number
----@param i integer
----@return string
-function HsvInput.format(n, i)
-  if i > 1 then
-    n = n * 100
-  end
-  n = utils.round(n)
-  return ("%6d"):format(n)
-end
+HsvInput.format = ColorInput.format_deg_percent
 
 ---@param RGB RGB
 ---@return HSV
