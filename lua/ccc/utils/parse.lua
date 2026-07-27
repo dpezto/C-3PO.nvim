@@ -81,26 +81,21 @@ function parse.percent(str, ratio, percent)
   ratio = vim.F.if_nil(ratio, 1)
   percent = vim.F.if_nil(percent, false)
 
-  local result
   if str:sub(-1, -1) == "%" then
-    str = str:sub(1, -2)
-    local num = tonumber(str)
-    if num then
-      result = num / 100
+    local num = tonumber(str:sub(1, -2))
+    if num == nil then
+      return
     end
-  else
-    ratio = vim.F.if_nil(ratio, 1)
-    local num = tonumber(str)
-    if num then
-      result = num / ratio
-    end
+    -- A percentage is a fraction of the full range, so it always scales by ratio.
+    return percent and num / 100 or num / 100 * ratio
   end
 
-  if not percent then
-    result = result * ratio
+  local num = tonumber(str)
+  if num == nil then
+    return
   end
-
-  return result
+  -- A bare number is already in the target unit unless the caller asked for [0-1].
+  return percent and num / ratio or num
 end
 
 ---@param str? string
@@ -111,7 +106,12 @@ function parse.alpha(str)
   elseif str == nil then
     return
   end
-  return parse.percent(str)
+  local a = parse.percent(str)
+  if a == nil then
+    return
+  end
+  -- CSS Color 4 clamps alpha to [0,1] rather than rejecting out-of-range values.
+  return math.min(math.max(a, 0), 1)
 end
 
 return parse

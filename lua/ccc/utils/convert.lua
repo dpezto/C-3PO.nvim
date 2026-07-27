@@ -127,12 +127,8 @@ function convert.rgb2hsv(RGB)
       H = (R - G) / (MAX - MIN) * 60 + 240
     end
     H = H % 360
-
-    if V == 0 then
-      S = 0
-    else
-      S = (MAX - MIN) / MAX
-    end
+    -- MAX ~= MIN here, so MAX (== V) is strictly positive.
+    S = (MAX - MIN) / MAX
   end
 
   return { H, S, V }
@@ -143,6 +139,8 @@ end
 function convert.hsv2rgb(HSV)
   local H, S, V = unpack(HSV)
   local RGB
+
+  H = H % 360
 
   local MAX = V
   local MIN = MAX - S * MAX
@@ -299,10 +297,11 @@ function convert.xyz2lab(XYZ)
     end
     return (29 / 3) ^ 3 * t
   end
+  local fy = f(Y / Yn)
   return {
-    f(Y / Yn),
-    (500 / 116) * (f(X / Xn) - f(Y / Yn)),
-    (200 / 116) * (f(Y / Yn) - f(Z / Zn)),
+    fy,
+    (500 / 116) * (f(X / Xn) - fy),
+    (200 / 116) * (fy - f(Z / Zn)),
   }
 end
 
@@ -406,7 +405,7 @@ function convert.hwb2rgb(HWB)
   local H, W, B = unpack(HWB)
   if W + B >= 1 then
     local gray = W / (W + B)
-    return { gray, gray, gray }
+    return rgb_clamp({ gray, gray, gray })
   end
   local RGB = convert.hsl2rgb({ H, 1, 0.5 })
   for i = 1, 3 do

@@ -131,12 +131,18 @@ function utils.valid_range(value, min, max)
 end
 
 function utils.bind(func, ...)
-  local args = { ... }
+  local bound = { ... }
+  local bound_n = select("#", ...)
   return function(...)
-    for _, v in ipairs({ ... }) do
-      table.insert(args, v)
+    -- Copy per call; appending to `bound` would leak arguments into every
+    -- later invocation of the same bound function.
+    local args = { unpack(bound, 1, bound_n) }
+    local n = bound_n
+    for i = 1, select("#", ...) do
+      n = n + 1
+      args[n] = (select(i, ...))
     end
-    func(unpack(args))
+    return func(unpack(args, 1, n))
   end
 end
 
