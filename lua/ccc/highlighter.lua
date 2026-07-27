@@ -1,16 +1,13 @@
 local utils = require("ccc.utils")
 local api = require("ccc.utils.api")
-local lsp_handler = require("ccc.handler.lsp")
 local picker_handler = require("ccc.handler.picker")
 local hl = require("ccc.handler.highlight")
 
 ---@class ccc.Highlighter
 ---@field picker_ns_id integer
----@field lsp_ns_id integer
 ---@field attached_buffer table<integer, boolean> Keys are bufnrs.
 local Highlighter = {
   picker_ns_id = vim.api.nvim_create_namespace("ccc-highlighter-picker"),
-  lsp_ns_id = vim.api.nvim_create_namespace("ccc-highlighter-lsp"),
   attached_buffer = {},
 }
 
@@ -98,7 +95,6 @@ function Highlighter:disable(bufnr)
   bufnr = utils.ensure_bufnr(bufnr)
   self.attached_buffer[bufnr] = nil
   if utils.bufnr_is_valid(bufnr) then
-    vim.api.nvim_buf_clear_namespace(bufnr, self.lsp_ns_id, 0, -1)
     vim.api.nvim_buf_clear_namespace(bufnr, self.picker_ns_id, 0, -1)
   end
 end
@@ -137,13 +133,7 @@ function Highlighter:update(bufnr, start_line, end_line)
     end
   end
 
-  if opts.highlighter.lsp then
-    local lsp_info = lsp_handler:info_in_range(bufnr, start_line, end_line)
-    vim.api.nvim_buf_clear_namespace(bufnr, self.lsp_ns_id, start_line, end_line)
-    for _, info in ipairs(lsp_info) do
-      set_hl(info, self.lsp_ns_id)
-    end
-  end
+  -- LSP-sourced colors are highlighted natively by vim.lsp.document_color.
   if opts.highlighter.picker then
     local picker_info = picker_handler.info_in_range(bufnr, start_line, end_line)
     vim.api.nvim_buf_clear_namespace(bufnr, self.picker_ns_id, start_line, end_line)

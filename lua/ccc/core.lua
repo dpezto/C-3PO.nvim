@@ -34,7 +34,7 @@ function Core:pick()
   ---@type integer?, integer?, RGB?, Alpha?, ccc.ColorInput?, ccc.ColorOutput?
   local start_col, end_col, rgb, alpha, input, output
   if opts.lsp then
-    start_col, end_col, rgb, alpha = require("ccc.handler.lsp"):pick()
+    start_col, end_col, rgb, alpha = require("ccc.handler.lsp").pick()
   end
   if start_col == nil then
     start_col, end_col, rgb, alpha, input, output = require("ccc.handler.picker").pick()

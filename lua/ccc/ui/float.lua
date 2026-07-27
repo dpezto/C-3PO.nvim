@@ -28,6 +28,11 @@ function UI:open(color, prev_colors)
   self.prev_colors = prev_colors
   -- Create new buffer and window and set text
   self.bufnr = vim.api.nvim_create_buf(false, true)
+  -- Mark the buffer before the window can be entered; anything reacting to
+  -- BufEnter/FileType (the highlighter's auto-enable included) must already
+  -- see it as ccc's own UI (#146).
+  vim.api.nvim_set_option_value("buftype", "nofile", { buf = self.bufnr })
+  vim.api.nvim_set_option_value("filetype", "ccc-ui", { buf = self.bufnr })
   local buffer, width = self:buffer()
   api.set_lines(self.bufnr, 0, -1, buffer)
   self:highlight(width)
@@ -37,10 +42,6 @@ function UI:open(color, prev_colors)
   vim.api.nvim_win_set_hl_ns(self.winid, self.ns_id)
   -- Move cursor to the top color bar
   api.set_cursor(1, 0)
-  -- Set options
-  vim.api.nvim_set_option_value("buftype", "nofile", { buf = self.bufnr })
-  vim.api.nvim_set_option_value("modifiable", false, { buf = self.bufnr })
-  vim.api.nvim_set_option_value("filetype", "ccc-ui", { buf = self.bufnr })
   vim.api.nvim_set_option_value("signcolumn", "no", { win = self.winid })
   -- Set highlight
   local float_normal = vim.api.nvim_get_hl(0, { name = "CccFloatNormal" }) --[[@as vim.api.keyset.highlight]]
@@ -90,9 +91,6 @@ function UI:update()
   api.set_lines(self.bufnr, 0, -1, buffer)
   self:highlight(width)
   vim.api.nvim_win_set_config(self.winid, { height = #buffer, width = width })
-  -- In v0.9.5, nvim_win_set_config() destroys the association between window and namespace.
-  -- This bug is fixed in nightly.
-  vim.api.nvim_win_set_hl_ns(self.winid, self.ns_id)
 end
 
 --- Close UI manually.

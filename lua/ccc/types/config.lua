@@ -39,7 +39,6 @@
 ---@field max_byte integer
 ---@field filetypes string[]
 ---@field excludes string[]
----@field lsp boolean
 ---@field picker boolean
 ---@field update_insert boolean
 
@@ -86,7 +85,6 @@
 ---@field max_byte? integer
 ---@field filetypes? string[]
 ---@field excludes? string[]
----@field lsp? boolean
 ---@field picker? boolean
 ---@field update_insert? boolean
 
