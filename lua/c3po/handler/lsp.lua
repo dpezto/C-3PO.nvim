@@ -20,6 +20,12 @@ end
 ---@return RGB?
 ---@return Alpha?
 function M.pick()
+  -- Asking for a method no attached server implements is a warning, not a
+  -- silent miss, and every LaTeX buffer would raise it: no LaTeX language
+  -- server declares a color provider.
+  if #vim.lsp.get_clients({ bufnr = 0, method = "textDocument/documentColor" }) == 0 then
+    return
+  end
   local param = { textDocument = vim.lsp.util.make_text_document_params() }
   local results = vim.lsp.buf_request_sync(0, "textDocument/documentColor", param, 200) or {}
   local cursor = { api.get_cursor() }
