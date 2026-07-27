@@ -5,12 +5,14 @@ Contents                                                          *ccc-contents*
 
 
 Introduction						|ccc-introduction|
+Installation						|ccc-installation|
 Setup							|ccc-setup|
 Option							|ccc-option|
 Command							|ccc-command|
 Key mapping						|ccc-key-mapping|
 Variable						|ccc-variable|
 Autocmd							|ccc-autocmd|
+Highlight						|ccc-highlight|
 Action							|ccc-action|
 
 
@@ -23,16 +25,47 @@ Use the colorful sliders to easily generate any desired color!
 
 Features:
 - No dependency.
-- Dynamic highlighting of sliders.
+- One |:Ccc| command with subcommands, completion and a menu.
+- Dynamic highlighting of sliders, with clickable ends and mouse support.
 - Supports more than 10 color spaces (RGB, HSL, CMYK, etc.).
 - Seamless input/output mode change.
 - Restore previously used colors.
 - Transparent slider for css functions (e.g. `rgb()`, `hsl()`)
+- CSS Color Level 4 and LaTeX (xcolor) formats, in both directions.
+- Yank a color in any format without touching the buffer (|:Ccc-yank|).
 - Color Highlighter for many formats.
 - Programmable modules (input/output/picker)
 
 Requirements:
 - Neovim 0.12+
+
+Neovim 0.12 highlights the colors reported by language servers itself (see
+|vim.lsp.document_color|), so ccc does not duplicate that; it highlights the
+formats its own pickers detect and reads LSP colors when picking or yanking.
+
+
+
+==============================================================================
+Installation                                                  *ccc-installation*
+
+
+With lazy.nvim (https://github.com/folke/lazy.nvim):
+>lua
+	{
+	  "dpezto/ccc.nvim",
+	  cmd = "Ccc",
+	  opts = {
+	    highlighter = { auto_enable = true },
+	  },
+	}
+<
+With vim-plug (https://github.com/junegunn/vim-plug):
+>vim
+	Plug 'dpezto/ccc.nvim'
+<
+Any plugin manager works; there are no dependencies. Nothing is set up
+until |ccc-setup| runs, so `opts`/`config` (or an explicit
+`require("ccc").setup()`) is required.
 
 
 
@@ -211,8 +244,8 @@ table
 Default: { "rgb", "hsl", "cmyk" }
 	Each entry is either a preset name or a module. Names save pulling
 	ccc.input into scope, and both forms may be mixed.
-	List of color system to be activated. |ccc-action-toggle_input_mode|
-	toggles in this order. The first one is the default used at the first
+	List of color system to be activated. |ccc-action-cycle_input_mode|
+	cycles in this order. The first one is the default used at the first
 	startup. Once activated, it will keep the previous input mode.
 	The presets currently available are as follows:
 		- RGB    "rgb"
@@ -234,9 +267,12 @@ Default: { "rgb", "hsl", "cmyk" }
 outputs ~
 table
 Default: { "hex", "hex_short", "css_rgb", "css_hsl" }
-	List of output format to be activated. |ccc-action-toggle_ouotput_mode|
-	toggles in this order. The first one is the default used at the first
+	Each entry is either a preset name or a module, like
+	|ccc-option-inputs|.
+	List of output format to be activated. |ccc-action-cycle_output_mode|
+	cycles in this order. The first one is the default used at the first
 	startup. Once activated, it will keep the previous output mode.
+	It is also the fallback format for |:Ccc-yank|.
 	The presets currently available are as follows:
 		- HEX (6/8 digits)  "hex"
 		      (3/4 digits)  "hex_short"
@@ -278,7 +314,10 @@ Default: {
 	"hex", "css_rgb", "css_hsl", "css_hwb",
 	"css_lab", "css_lch", "css_oklab", "css_oklch",
 }
-	List of formats that can be detected by |:Ccc-pick| to be activated.
+	Each entry is either a preset name or a module, like
+	|ccc-option-inputs|.
+	List of formats detected by |:Ccc-pick|, |:Ccc-yank| and the
+	highlighter.
 	The presets currently available are as follows:
 		- HEX       "hex"
 		            "hex_long" (#RRGGBB, #RRGGBBAA)
@@ -540,17 +579,21 @@ Default: false
 recognize.pattern ~
 table
 Default: {
-	[picker.css_rgb]   = { input.rgb,   output.rgb       },
-	[picker.css_name]  = { input.rgb,   output.rgb       },
-	[picker.hex]       = { input.rgb,   output.hex       },
-	[picker.css_hsl]   = { input.hsl,   output.css_hsl   },
-	[picker.css_hwb]   = { input.hwb,   output.css_hwb   },
-	[picker.css_lab]   = { input.lab,   output.css_lab   },
-	[picker.css_lch]   = { input.lch,   output.css_lch   },
-	[picker.css_oklab] = { input.oklab, output.css_oklab },
-	[picker.css_oklch] = { input.oklch, output.css_oklch },
+	css_rgb   = { "rgb",   "css_rgb"   },
+	css_name  = { "rgb",   "css_rgb"   },
+	hex       = { "rgb",   "hex"       },
+	hex_long  = { "rgb",   "hex"       },
+	hex_short = { "rgb",   "hex_short" },
+	css_hsl   = { "hsl",   "css_hsl"   },
+	css_hwb   = { "hwb",   "css_hwb"   },
+	css_lab   = { "lab",   "css_lab"   },
+	css_lch   = { "lch",   "css_lch"   },
+	css_oklab = { "oklab", "css_oklab" },
+	css_oklch = { "oklch", "css_oklch" },
 }
 	Define the correspondence between the picker and input, output.
+	Keys are picker names (or modules) and values are {input, output},
+	each of which is likewise a name or a module.
 
 
                                            *ccc-option-disable-default-mappings*
@@ -563,7 +606,38 @@ Default: false
                                                            *ccc-option-mappings*
 mappings ~
 table
-Default: See |ccc-action|
+Default: >lua
+	{
+	  ["<CR>"] = mapping.complete,
+	  ["q"]    = mapping.quit,
+	  ["l"]    = mapping.increase1,
+	  ["d"]    = mapping.increase5,
+	  [","]    = mapping.increase10,
+	  ["h"]    = mapping.decrease1,
+	  ["s"]    = mapping.decrease5,
+	  ["m"]    = mapping.decrease10,
+	  ["H"]    = mapping.set0,
+	  ["M"]    = mapping.set50,
+	  ["L"]    = mapping.set100,
+	  ["0"]    = mapping.set0,
+	  ["1"]    = utils.bind(mapping._set_percent, 10),
+	  -- ... "2" through "9" set 20% through 90%
+	  ["5"]    = mapping.set50,
+	  ["$"]    = mapping.set100,
+	  ["r"]    = mapping.reset_mode,
+	  ["a"]    = mapping.toggle_alpha,
+	  ["g"]    = mapping.toggle_prev_colors,
+	  ["b"]    = mapping.goto_prev,
+	  ["w"]    = mapping.goto_next,
+	  ["B"]    = mapping.goto_head,
+	  ["W"]    = mapping.goto_tail,
+	  ["i"]    = mapping.cycle_input_mode,
+	  ["o"]    = mapping.cycle_output_mode,
+	  ["<LeftMouse>"]       = mapping.click,
+	  ["<ScrollWheelDown>"] = mapping.decrease1,
+	  ["<ScrollWheelUp>"]   = mapping.increase1,
+	}
+<
 	The mappings are set in the UI of ccc. The table where lhs is key and
 	rhs is value. To disable all default mappings, use
 	|ccc-option-disable-default-mappings|. To disable only some of the
@@ -805,7 +879,7 @@ mapping.increase1()
 mapping.increase5()
 mapping.increase10()
 mapping.delta(intger)
-Default mapping: l / d / , (1 / 5 / 10)
+Default mapping: l / d / , (1 / 5 / 10), <ScrollWheelUp> (1)
 	Increase the value times delta of the slider.
 	The delta is defined each color system, e.g. RGB is 1.
 
@@ -817,7 +891,7 @@ mapping.decrease1()
 mapping.decrease5()
 mapping.decrease10()
 mapping.delta(intger)
-Default mapping: h / s / m (1 / 5 / 10)
+Default mapping: h / s / m (1 / 5 / 10), <ScrollWheelDown> (1)
 	Decrease the value times delta of the slider.
 	The delta is defined each color system, e.g. RGB is 1.
 
