@@ -11,6 +11,9 @@ local css_name = require("ccc.picker.css_name")
 local custom_entries = require("ccc.picker.custom_entries")
 local trailing_whitespace = require("ccc.picker.trailing_whitespace")
 local ansi_escape = require("ccc.picker.ansi_escape")
+local latex_rgb = require("ccc.picker.latex_rgb")
+local latex_cmyk = require("ccc.picker.latex_cmyk")
+local latex_html = require("ccc.picker.latex_html")
 
 ---@param a number[]
 ---@return number[]
@@ -323,6 +326,73 @@ describe("Color detection test", function()
         [["\\u001b[31;44m"]],
         { fg = "#ff0000", bg = "#0000ff" }
       )
+    end)
+  end)
+  -- Every other case in this file pads the color with a leading and trailing
+  -- space, which hid the boundary and ordering bugs below.
+  describe("boundaries and ordering", function()
+    it("matches a color that fills the whole line", function()
+      local start, end_ = css_rgb:parse_color("rgb(0 0 0)")
+      assert.equals(1, start)
+      assert.equals(10, end_)
+      start, end_ = latex_rgb:parse_color("{RGB}{0, 0, 0}")
+      assert.equals(1, start)
+      assert.equals(14, end_)
+    end)
+
+    it("reports the column the pattern matched, not the first lookalike", function()
+      -- `x#fff` is rejected (preceded by a keyword char); the match is the second one.
+      local s = "x#fff #fff"
+      local start, end_ = hex:parse_color(s)
+      assert.equals(7, start)
+      assert.equals(10, end_)
+      assert.equals("#fff", s:sub(start, end_))
+    end)
+
+    it("returns the earliest match when several patterns match", function()
+      -- The comma form comes later in the pattern list but earlier in the line.
+      local s = "rgba(1, 2, 3) then rgb(4 5 6)"
+      local start, end_ = css_rgb:parse_color(s)
+      assert.equals(1, start)
+      assert.equals(13, end_)
+      assert.equals("rgba(1, 2, 3)", s:sub(start, end_))
+    end)
+
+    it("clamps out-of-range alpha instead of passing it through", function()
+      local _, _, _, alpha = css_rgb:parse_color(" rgba(0, 0, 0, 5) ")
+      assert.equals(1, alpha)
+      _, _, _, alpha = css_rgb:parse_color(" rgba(0, 0, 0, -1) ")
+      assert.equals(0, alpha)
+    end)
+  end)
+  describe("LaTeX (xcolor)", function()
+    it("RGB and rgb models", function()
+      test_rgb(latex_rgb, " {RGB}{255, 0, 255} ", { 255, 0, 255 }, nil)
+      test_rgb(latex_rgb, " {rgb}{1, 0, 1} ", { 255, 0, 255 }, nil)
+      -- The separators are optional, so this is the true minimum length.
+      test_rgb(latex_rgb, " {RGB}{0,0,0} ", { 0, 0, 0 }, nil)
+    end)
+
+    it("cmyk model", function()
+      test_rgb(latex_cmyk, " {cmyk}{0, 1, 1, 0} ", { 255, 0, 0 }, nil)
+      test_rgb(latex_cmyk, " {cmyk}{0,1,1,0} ", { 255, 0, 0 }, nil)
+      test_rgb(latex_cmyk, " {cmyk}{0.000, 0.000, 0.000, 1.000} ", { 0, 0, 0 }, nil)
+      -- Three components is the rgb model, not cmyk.
+      test_rgb(latex_cmyk, " {cmyk}{0, 1, 1} ", nil, nil)
+      test_rgb(latex_cmyk, " {cmyk}{0, 1, 1, 2} ", nil, nil)
+    end)
+
+    it("HTML model", function()
+      test_rgb(latex_html, " {HTML}{FF00FF} ", { 255, 0, 255 }, nil)
+      test_rgb(latex_html, " {HTML}{ff00ff} ", { 255, 0, 255 }, nil)
+      test_rgb(latex_html, " {HTML}{123456} ", { 18, 52, 86 }, nil)
+      test_rgb(latex_html, " {HTML}{FF00F} ", nil, nil)
+    end)
+
+    it("finds the model inside a full \\definecolor", function()
+      local s = [[\definecolor{brand}{HTML}{123456}]]
+      local start, end_ = latex_html:parse_color(s)
+      assert.equals("{HTML}{123456}", s:sub(start, end_))
     end)
   end)
 end)

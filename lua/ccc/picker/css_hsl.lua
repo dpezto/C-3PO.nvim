@@ -28,13 +28,7 @@ function CssHslPicker:parse_color(s, init)
   init = init or 1
   -- The shortest patten is 12 characters like `hsl(0 0% 0%)`
   while init <= #s - 11 do
-    local start_col, end_col, cap1, cap2, cap3, cap4
-    for _, pat in ipairs(self.pattern) do
-      start_col, end_col, cap1, cap2, cap3, cap4 = pattern.find(s, pat, init)
-      if start_col then
-        break
-      end
-    end
+    local start_col, end_col, cap1, cap2, cap3, cap4 = pattern.find_first(s, self.pattern, init)
     if not (start_col and end_col and cap1 and cap2 and cap3) then
       return
     end

@@ -25,21 +25,18 @@ end
 function LatexRgbPicker:parse_color(s, init)
   self:init()
   init = init or 1
-  -- The shortest patten is 14 characters like `{RGB}{0, 0, 0}`
-  while init < #s - 13 do
-    local start_col, end_col, cap1, cap2, cap3, cap4
-    for _, pat in ipairs(self.pattern) do
-      start_col, end_col, cap1, cap2, cap3, cap4 = pattern.find(s, pat, init)
-      if start_col then
-        break
-      end
-    end
+  -- The separators are optional whitespace, so the shortest patten is the
+  -- 12 characters of `{RGB}{0,0,0}`, not the 14 of `{RGB}{0, 0, 0}`.
+  while init <= #s - 11 do
+    local start_col, end_col, cap1, cap2, cap3, cap4 = pattern.find_first(s, self.pattern, init)
     if not (start_col and end_col and cap1 and cap2 and cap3) then
       return
     end
-    local R = parse.percent(cap1, 255, true)
-    local G = parse.percent(cap2, 255, true)
-    local B = parse.percent(cap3, 255, true)
+    -- xcolor's two models differ only in scale: `RGB` is 0-255, `rgb` is 0-1.
+    local ratio = s:sub(start_col + 1, start_col + 3) == "RGB" and 255 or 1
+    local R = parse.percent(cap1, ratio, true)
+    local G = parse.percent(cap2, ratio, true)
+    local B = parse.percent(cap3, ratio, true)
     if utils.valid_range({ R, G, B }, 0, 1) then
       local A = parse.alpha(cap4)
       return start_col, end_col, { R, G, B }, A

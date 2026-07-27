@@ -30,14 +30,8 @@ function CssRgbPicker:parse_color(s, init)
   self:init()
   init = init or 1
   -- The shortest patten is 10 characters like `rgb(0 0 0)`
-  while init < #s - 9 do
-    local start_col, end_col, cap1, cap2, cap3, cap4
-    for _, pat in ipairs(self.pattern) do
-      start_col, end_col, cap1, cap2, cap3, cap4 = pattern.find(s, pat, init)
-      if start_col then
-        break
-      end
-    end
+  while init <= #s - 9 do
+    local start_col, end_col, cap1, cap2, cap3, cap4 = pattern.find_first(s, self.pattern, init)
     if not (start_col and end_col and cap1 and cap2 and cap3) then
       return
     end
