@@ -54,6 +54,48 @@ M.register("convert", {
   end,
 })
 
+M.register("yank", {
+  nargs = "?",
+  desc = "Yank the color under the cursor, optionally in a given format",
+  complete = function(arg_lead)
+    local names = {}
+    for _, f in ipairs(vim.api.nvim_get_runtime_file("lua/ccc/output/*.lua", true)) do
+      names[#names + 1] = vim.fn.fnamemodify(f, ":t:r")
+    end
+    table.sort(names)
+    return starting_with(arg_lead, names)
+  end,
+  func = function(_, data)
+    local opts = require("ccc.config").options
+    local output
+    if data.fargs[1] then
+      local ok, mod = pcall(require, "ccc.output." .. data.fargs[1])
+      if not ok or type(mod) ~= "table" then
+        vim.notify(("[ccc] yank: no such output: %q"):format(data.fargs[1]), vim.log.levels.ERROR)
+        return
+      end
+      output = mod
+    else
+      output = opts.outputs[1]
+    end
+    ---@type integer?, integer?, RGB?, Alpha?
+    local _, _, rgb, alpha
+    if opts.lsp then
+      _, _, rgb, alpha = require("ccc.handler.lsp").pick()
+    end
+    if rgb == nil then
+      _, _, rgb, alpha = require("ccc.handler.picker").pick()
+    end
+    if rgb == nil then
+      vim.notify("[ccc] yank: no color under the cursor", vim.log.levels.WARN)
+      return
+    end
+    local text = output.str(rgb, alpha)
+    vim.fn.setreg(vim.v.register, text)
+    vim.notify(("[ccc] yanked %s"):format(text))
+  end,
+})
+
 local highlighter_actions = { "enable", "disable", "toggle" }
 
 M.register("highlighter", {
