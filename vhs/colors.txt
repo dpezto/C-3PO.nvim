@@ -1,0 +1,8 @@
+#22ccff  #ff8800  #a020f0
+rgb(255 99 71)
+hsl(200 80% 50%)
+
+\definecolor{brand}{HTML}{1E90FF}
+\definecolor{ink}{RGB}{40, 40, 60}
+\definecolor{accent}{cmyk}{0, 0.6, 0.8, 0}
+\definecolor{paper}{gray}{0.95}
