@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/dpezto/C-3PO.nvim/compare/v1.0.0...v1.0.1) (2026-07-28)
+
+
+### Bug Fixes
+
+* **config:** copy the defaults before resolving into them ([e3e7c9e](https://github.com/dpezto/C-3PO.nvim/commit/e3e7c9ee002814fc02ea75f352d1d0cb8bcd969b))
+
 ## 1.0.0 (2026-07-28)
 
 
