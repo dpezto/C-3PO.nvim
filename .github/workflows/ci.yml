@@ -79,6 +79,8 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      # Config lives in release-please-config.json and
+      # .release-please-manifest.json, which the action picks up by name. The
+      # release-type input is not passed alongside them: it selects the older
+      # non-manifest mode, and extra-files (CITATION.cff) needs the manifest.
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
-        with:
-          release-type: simple
