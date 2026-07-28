@@ -1,6 +1,6 @@
 # Restore a previously used color — g opens the row, CR applies.
 Output assets/prev-colors.gif
-Set FontFamily "Fira Code"
+Set FontFamily "FiraCode Nerd Font Mono"
 Set FontSize 18
 Set Width 900
 Set Height 380

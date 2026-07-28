@@ -1,6 +1,6 @@
 # :C3 yank — grab the color under the cursor in any format, then paste it.
 Output assets/yank.gif
-Set FontFamily "Fira Code"
+Set FontFamily "FiraCode Nerd Font Mono"
 Set FontSize 18
 Set Width 900
 Set Height 380
@@ -15,7 +15,7 @@ Hide
 Type "nvim --clean -u vhs/demo-init.lua"
 Enter
 Sleep 2s
-Type "i#1e90ff"
+Type "i#DEC1DE"
 Escape
 Type "0"
 Type ":C3 highlighter enable"

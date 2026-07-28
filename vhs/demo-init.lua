@@ -12,13 +12,21 @@ vim.opt.showcmd = false
 vim.opt.fillchars = { eob = " " }
 
 require("c3po").setup({
-  -- Rounded slider ends; the glyphs live in Fira Code (the tapes' font).
+  -- Rounded slider ends; the glyphs need the tapes' font, a Nerd Font.
   bar_cap_start = "\u{ee03}",
   bar_char = "\u{ee04}",
   bar_cap_end = "\u{ee05}",
   bar_len = 32,
   highlighter = { auto_enable = true },
+  inputs = { "rgb", "hsl", "cmyk", "gray" },
   outputs = { "hex", "css_rgb", "css_hsl", "latex_rgb", "latex_cmyk", "latex_html", "latex_gray" },
-  pickers = { "hex", "css_rgb", "css_hsl", "latex" },
+  -- stylua: ignore
+  pickers = {
+    "hex", "css_rgb", "css_hsl",
+    "latex_rgb_float", "latex_rgb", "latex_cmyk", "latex_html", "latex_gray15", "latex_gray",
+    "latex", "latex_name",
+  },
+  -- A pick reopens in the format it found, and writes it back the same way.
+  recognize = { input = true, output = true },
   convert = { "hex", "css_rgb", "css_hsl", "latex_rgb", "latex_cmyk", "latex_html" },
 })

@@ -1,6 +1,6 @@
 # :C3 pick — sliders, input/output cycling, alpha toggle.
 Output assets/pick.gif
-Set FontFamily "Fira Code"
+Set FontFamily "FiraCode Nerd Font Mono"
 Set FontSize 18
 Set Width 900
 Set Height 380
