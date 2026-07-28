@@ -1,16 +1,10 @@
 set termguicolors
 
-let s:plug_dir = expand('/tmp/plugged/vim-plug')
-if !filereadable(s:plug_dir .. '/autoload/plug.vim')
-  execute printf('!curl -fLo %s/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim', s:plug_dir)
+let s:dir = expand('/tmp/c3po-repro/C-3PO.nvim')
+if !isdirectory(s:dir)
+  execute printf('!git clone --depth 1 https://github.com/dpezto/C-3PO.nvim %s', s:dir)
 end
-
-execute 'set runtimepath+=' . s:plug_dir
-call plug#begin(s:plug_dir)
-Plug 'dpezto/C-3PO.nvim'
-Plug 'neovim/nvim-lspconfig'
-call plug#end()
-PlugInstall | quit
+execute 'set runtimepath+=' . s:dir
 
 lua <<EOF
 local c3po = require("c3po")
@@ -20,5 +14,11 @@ c3po.setup({
     -- Minimal configurations required to reproduce the problem.
 })
 
-require("lspconfig").cssls.setup({})
+-- Only needed when the problem involves LSP colors (requires
+-- vscode-css-language-server on $PATH).
+vim.lsp.config("cssls", {
+  cmd = { "vscode-css-language-server", "--stdio" },
+  filetypes = { "css", "scss", "less" },
+})
+vim.lsp.enable("cssls")
 EOF

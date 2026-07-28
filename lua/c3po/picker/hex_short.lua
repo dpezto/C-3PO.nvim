@@ -1,13 +1,16 @@
-local HexPicker = require("c3po.picker.hex")
+local parse = require("c3po.utils.parse")
 
----@class c3po.ColorPicker.HexShort: c3po.ColorPicker.Hex
-local HexShortPicker = setmetatable({}, { __index = HexPicker })
-
--- #RGB
--- #RGBA
-HexShortPicker.pattern = {
-  [=[\v%(^|[^[:keyword:]])\zs#(\x)(\x)(\x)>]=],
-  [=[\v%(^|[^[:keyword:]])\zs#(\x)(\x)(\x)(\x)>]=],
-}
-
-return HexShortPicker
+-- #RGB and #RGBA only
+return require("c3po.picker")({
+  min_len = 4,
+  patterns = {
+    [=[\v%(^|[^[:keyword:]])\zs#(\x)(\x)(\x)>]=],
+    [=[\v%(^|[^[:keyword:]])\zs#(\x)(\x)(\x)(\x)>]=],
+  },
+  to_rgb = function(c1, c2, c3, c4)
+    local r, g, b = parse.hex(c1), parse.hex(c2), parse.hex(c3)
+    if r and g and b then
+      return { r, g, b }, parse.hex(c4)
+    end
+  end,
+})

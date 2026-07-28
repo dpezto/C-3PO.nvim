@@ -68,12 +68,4 @@ function M.virtual_hl(bufnr, ns_id, pos, mark, virt_pos, hl_group, hl_def)
   })
 end
 
----@param bufnr integer
----@param row integer 0-index
----@return integer length
-function M.line_length(bufnr, row)
-  local line = vim.api.nvim_buf_get_lines(bufnr, row, row + 1, false)[1]
-  return vim.api.nvim_strwidth(line)
-end
-
 return M

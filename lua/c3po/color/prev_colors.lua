@@ -1,8 +1,7 @@
-local array = require("c3po.utils.array")
 local utils = require("c3po.utils")
 
 ---@class c3po.PrevColors
----@field _values estrela.array c3po.Color[]
+---@field _values c3po.Color[]
 ---@field _index integer
 local PrevColors = {}
 PrevColors.__index = PrevColors
@@ -10,21 +9,22 @@ PrevColors.__index = PrevColors
 ---@return c3po.PrevColors
 function PrevColors.new()
   return setmetatable({
-    _values = array.new(),
+    _values = {},
     _index = 1,
   }, PrevColors)
 end
 
 function PrevColors:reset()
-  self._values = array.new()
+  self._values = {}
   self._index = 1
 end
 
 ---@param color c3po.Color
 function PrevColors:prepend(color)
   local opts = require("c3po.config").options
-  if opts.max_prev_colors < self._values:unshift(color) then
-    self._values = self._values:slice(1, opts.max_prev_colors)
+  table.insert(self._values, 1, color)
+  for i = #self._values, opts.max_prev_colors + 1, -1 do
+    self._values[i] = nil
   end
 end
 
@@ -45,7 +45,11 @@ end
 
 ---@return string
 function PrevColors:str()
-  return self._values:map("x:hex()"):join(" ")
+  local hexes = {}
+  for i, color in ipairs(self._values) do
+    hexes[i] = color:hex()
+  end
+  return table.concat(hexes, " ")
 end
 
 ---@param d integer

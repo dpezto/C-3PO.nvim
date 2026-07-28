@@ -16,13 +16,10 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ]]
 
+-- Trimmed to the HSLuv <-> sRGB round trip. The upstream HPLuv and hex
+-- helpers are gone; nothing here ever called them.
+
 local hsluv = {}
-
-local hexChars = "0123456789abcdef"
-
-local distance_line_from_origin = function(line)
-  return math.abs(line.intercept) / math.sqrt((line.slope ^ 2) + 1)
-end
 
 local length_of_ray_until_intersect = function(theta, line)
   return line.intercept / (math.sin(theta) - line.slope * math.cos(theta))
@@ -54,19 +51,6 @@ hsluv.get_bounds = function(l)
     end
   end
   return result
-end
-
-hsluv.max_safe_chroma_for_l = function(l)
-  local bounds = hsluv.get_bounds(l)
-  local min = 1.7976931348623157e+308
-
-  for i = 1, 6 do
-    local length = distance_line_from_origin(bounds[i])
-    if length >= 0 then
-      min = math.min(min, length)
-    end
-  end
-  return min
 end
 
 hsluv.max_safe_chroma_for_lh = function(l, h)
@@ -231,58 +215,6 @@ hsluv.lch_to_hsluv = function(tuple)
   return { H, C / max_chroma * 100, L }
 end
 
-hsluv.hpluv_to_lch = function(tuple)
-  local H = tuple[1]
-  local S = tuple[2]
-  local L = tuple[3]
-  if L > 99.9999999 then
-    return { 100, 0, H }
-  end
-  if L < 0.00000001 then
-    return { 0, 0, H }
-  end
-  return { L, hsluv.max_safe_chroma_for_l(L) / 100 * S, H }
-end
-
-hsluv.lch_to_hpluv = function(tuple)
-  local L = tuple[1]
-  local C = tuple[2]
-  local H = tuple[3]
-  if L > 99.9999999 then
-    return { H, 0, 100 }
-  end
-  if L < 0.00000001 then
-    return { H, 0, 0 }
-  end
-  return { H, C / hsluv.max_safe_chroma_for_l(L) * 100, L }
-end
-
-hsluv.rgb_to_hex = function(tuple)
-  local h = "#"
-  for i = 1, 3 do
-    local c = math.floor(tuple[i] * 255 + 0.5)
-    local digit2 = math.fmod(c, 16)
-    local x = (c - digit2) / 16
-    local digit1 = math.floor(x)
-    h = h .. string.sub(hexChars, digit1 + 1, digit1 + 1)
-    h = h .. string.sub(hexChars, digit2 + 1, digit2 + 1)
-  end
-  return h
-end
-
-hsluv.hex_to_rgb = function(hex)
-  hex = string.lower(hex)
-  local ret = {}
-  for i = 0, 2 do
-    local char1 = string.sub(hex, i * 2 + 2, i * 2 + 2)
-    local char2 = string.sub(hex, i * 2 + 3, i * 2 + 3)
-    local digit1 = string.find(hexChars, char1) - 1
-    local digit2 = string.find(hexChars, char2) - 1
-    ret[i + 1] = (digit1 * 16 + digit2) / 255.0
-  end
-  return ret
-end
-
 hsluv.lch_to_rgb = function(tuple)
   return hsluv.xyz_to_rgb(hsluv.luv_to_xyz(hsluv.lch_to_luv(tuple)))
 end
@@ -297,30 +229,6 @@ end
 
 hsluv.rgb_to_hsluv = function(tuple)
   return hsluv.lch_to_hsluv(hsluv.rgb_to_lch(tuple))
-end
-
-hsluv.hpluv_to_rgb = function(tuple)
-  return hsluv.lch_to_rgb(hsluv.hpluv_to_lch(tuple))
-end
-
-hsluv.rgb_to_hpluv = function(tuple)
-  return hsluv.lch_to_hpluv(hsluv.rgb_to_lch(tuple))
-end
-
-hsluv.hsluv_to_hex = function(tuple)
-  return hsluv.rgb_to_hex(hsluv.hsluv_to_rgb(tuple))
-end
-
-hsluv.hpluv_to_hex = function(tuple)
-  return hsluv.rgb_to_hex(hsluv.hpluv_to_rgb(tuple))
-end
-
-hsluv.hex_to_hsluv = function(s)
-  return hsluv.rgb_to_hsluv(hsluv.hex_to_rgb(s))
-end
-
-hsluv.hex_to_hpluv = function(s)
-  return hsluv.rgb_to_hpluv(hsluv.hex_to_rgb(s))
 end
 
 hsluv.m = {

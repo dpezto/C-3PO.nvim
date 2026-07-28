@@ -1,47 +1,18 @@
-local utils = require("c3po.utils")
 local convert = require("c3po.utils.convert")
 local parse = require("c3po.utils.parse")
 local pattern = require("c3po.utils.pattern")
+local utils = require("c3po.utils")
 
----@class c3po.ColorPicker.CssHsl: c3po.ColorPicker
----@field patten string[]
-local CssHslPicker = {}
-
-function CssHslPicker:init()
-  if self.pattern then
-    return
-  end
-  self.pattern = {
+return require("c3po.picker")({
+  min_len = 12, -- hsl(0 0% 0%)
+  patterns = {
     pattern.create("hsla?( [<hue>|none]  [<percentage>|none]  [<percentage>|none] %[/ [<alpha-value>|none]]? )"),
     pattern.create("hsla?( [<hue>] , [<percentage>] , [<percentage>] %[, [<alpha-value>]]? )"),
-  }
-end
-
----@param s string
----@param init? integer
----@return integer? start_col
----@return integer? end_col
----@return RGB? rgb
----@return Alpha? alpha
-function CssHslPicker:parse_color(s, init)
-  self:init()
-  init = init or 1
-  -- The shortest patten is 12 characters like `hsl(0 0% 0%)`
-  while init <= #s - 11 do
-    local start_col, end_col, cap1, cap2, cap3, cap4 = pattern.find_first(s, self.pattern, init)
-    if not (start_col and end_col and cap1 and cap2 and cap3) then
-      return
-    end
-    local H = parse.hue(cap1)
-    local S = parse.percent(cap2)
-    local L = parse.percent(cap3)
+  },
+  to_rgb = function(c1, c2, c3, c4)
+    local H, S, L = parse.hue(c1), parse.percent(c2), parse.percent(c3)
     if H and utils.valid_range({ S, L }, 0, 1) then
-      local RGB = convert.hsl2rgb({ H, S, L })
-      local A = parse.alpha(cap4)
-      return start_col, end_col, RGB, A
+      return convert.hsl2rgb({ H, S, L }), parse.alpha(c4)
     end
-    init = end_col + 1
-  end
-end
-
-return CssHslPicker
+  end,
+})

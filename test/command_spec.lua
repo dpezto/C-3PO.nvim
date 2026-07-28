@@ -63,6 +63,21 @@ describe("Commands", function()
       assert.equal("#ffffff", vim.g.c3po_color)
       feed("<CR>")
     end)
+
+    it("Recognizes the picked format when enabled", function()
+      local opts = require("c3po.config").options
+      local saved_in, saved_out = opts.recognize.input, opts.recognize.output
+      opts.recognize.input, opts.recognize.output = true, true
+      finally(function()
+        opts.recognize.input, opts.recognize.output = saved_in, saved_out
+      end)
+      utils.set_lines(0, -1, { "hsl(180 50% 50%)" })
+      vim.cmd("C3 pick")
+      feed("<CR>")
+      -- Input and output followed the picked format, so the color is written
+      -- back as hsl rather than the default hex.
+      assert.equal("hsl(180 50% 50%)", utils.get_line())
+    end)
   end)
 
   describe("C3 yank", function()

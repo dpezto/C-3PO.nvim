@@ -7,7 +7,7 @@ function M.select(cmd)
   ---@type integer?, integer?, RGB?, Alpha?
   local start_col, end_col
   if opts.lsp then
-    start_col, end_col = require("c3po.handler.lsp"):pick()
+    start_col, end_col = require("c3po.handler.lsp").pick()
   end
   if start_col == nil then
     start_col, end_col = require("c3po.handler.picker").pick()
