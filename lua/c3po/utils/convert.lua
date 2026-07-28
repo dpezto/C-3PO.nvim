@@ -166,6 +166,73 @@ function convert.hsv2rgb(HSV)
   return rgb_clamp(RGB)
 end
 
+-- xcolor's default \rangetHsb tuning, with the implicit (0,0) and (360,360)
+-- endpoints. tHsb hue on the x axis, Hsb hue on the y axis; both strictly
+-- increasing, so the map is invertible by swapping the axes.
+local THSB_POINTS = { { 0, 0 }, { 60, 30 }, { 120, 60 }, { 180, 120 }, { 210, 180 }, { 240, 240 }, { 360, 360 } }
+
+---@param hue number #Degrees
+---@param x integer #1 to read the x axis as input, 2 for the inverse
+---@return number #Degrees
+local function thsb_polyline(hue, x)
+  local y = 3 - x
+  for i = 2, #THSB_POINTS do
+    local p, q = THSB_POINTS[i - 1], THSB_POINTS[i]
+    if hue <= q[x] then
+      return p[y] + (q[y] - p[y]) / (q[x] - p[x]) * (hue - p[x])
+    end
+  end
+  return hue
+end
+
+---xcolor's tuned hue (tHsb model) to a plain Hsb hue, both in degrees.
+---@param hue number
+---@return number
+function convert.thsb2hsb_hue(hue)
+  return thsb_polyline(hue, 1)
+end
+
+---@param hue number
+---@return number
+function convert.hsb2thsb_hue(hue)
+  return thsb_polyline(hue, 2)
+end
+
+---xcolor's wave model: a wavelength in nanometers to HSV, per the xcolor
+---manual's wave-to-hsb conversion (Bruton's algorithm, gamma = 1). Saturation
+---is always full; brightness fades to black outside roughly [363, 814] nm.
+---@param lambda number
+---@return HSV
+function convert.wave2hsv(lambda)
+  local function clamp01(x)
+    return math.min(1, math.max(0, x))
+  end
+  local hue
+  if lambda < 440 then
+    hue = 4 + clamp01((lambda - 440) / (380 - 440))
+  elseif lambda < 490 then
+    hue = 4 - clamp01((lambda - 440) / (490 - 440))
+  elseif lambda < 510 then
+    hue = 2 + clamp01((lambda - 510) / (490 - 510))
+  elseif lambda < 580 then
+    hue = 2 - clamp01((lambda - 510) / (580 - 510))
+  elseif lambda < 645 then
+    hue = clamp01((lambda - 645) / (580 - 645))
+  else
+    hue = 0
+  end
+  local brightness
+  if lambda < 420 then
+    brightness = clamp01(0.3 + 0.7 * (lambda - 380) / (420 - 380))
+  elseif lambda <= 700 then
+    brightness = 1
+  else
+    brightness = clamp01(0.3 + 0.7 * (lambda - 780) / (700 - 780))
+  end
+  -- The manual's hue is a fraction of a turn; rgb2hsv/hsv2rgb speak degrees.
+  return { hue * 60, 1, brightness }
+end
+
 ---@param RGB RGB
 ---@return CMYK
 function convert.rgb2cmyk(RGB)

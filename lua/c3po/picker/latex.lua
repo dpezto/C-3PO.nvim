@@ -111,6 +111,44 @@ function LatexPicker:init()
       end,
     },
     {
+      -- Hsb is hsb with the hue in degrees; saturation and brightness stay
+      -- in [0, 1].
+      name = "Hsb",
+      pattern = spec("Hsb", 3, NUM),
+      to_rgb = function(c)
+        local H, S, B = per(c[1], 360), per(c[2]), per(c[3])
+        if not (H and S and B) or not utils.valid_range({ H, S, B }, 0, 1) then
+          return
+        end
+        return convert.hsv2rgb({ H * 360, S, B })
+      end,
+    },
+    {
+      -- tHsb is Hsb with the hue remapped through xcolor's tuning polyline.
+      name = "tHsb",
+      pattern = spec("tHsb", 3, NUM),
+      to_rgb = function(c)
+        local H, S, B = per(c[1], 360), per(c[2]), per(c[3])
+        if not (H and S and B) or not utils.valid_range({ H, S, B }, 0, 1) then
+          return
+        end
+        return convert.hsv2rgb({ convert.thsb2hsb_hue(H * 360), S, B })
+      end,
+    },
+    {
+      -- A wavelength in nanometers. Any real number is a valid spec; the
+      -- conversion fades to black outside the visible range.
+      name = "wave",
+      pattern = spec("wave", 1, NUM),
+      to_rgb = function(c)
+        local L = per(c[1], 1)
+        if L == nil then
+          return
+        end
+        return convert.hsv2rgb(convert.wave2hsv(L))
+      end,
+    },
+    {
       name = "gray",
       pattern = spec("gray", 1, PER),
       to_rgb = function(c)

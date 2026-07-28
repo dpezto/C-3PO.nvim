@@ -71,6 +71,23 @@ return {
         css_lch   = { "lch",   "css_lch"   },
         css_oklab = { "oklab", "css_oklab" },
         css_oklch = { "oklch", "css_oklch" },
+        -- The full "latex" picker matches every model, so it cannot name one
+        -- output; recognition needs the single-model views, listed in
+        -- 'pickers' ahead of it.
+        latex_rgb       = { "rgb",  "latex_rgb"       },
+        latex_rgb_float = { "rgb",  "latex_rgb_float" },
+        latex_cmyk      = { "cmyk", "latex_cmyk"      },
+        latex_html      = { "rgb",  "latex_html"      },
+        latex_gray      = { "gray", "latex_gray"      },
+        latex_gray15    = { "gray", "latex_gray15"    },
+        latex_cmy       = { "cmyk", "latex_cmy"       },
+        latex_hsb       = { "hsv",  "latex_hsb"       },
+        latex_hsb360    = { "hsv",  "latex_hsb360"    },
+        latex_hsb240    = { "hsv",  "latex_hsb240"    },
+        latex_thsb      = { "hsv",  "latex_thsb"      },
+        -- Wave has an input but no output: xcolor has no conversion into a
+        -- wavelength, so a {wave} pick keeps the current output mode.
+        latex_wave      = { "hsv" },
     },
   },
   mappings = {
