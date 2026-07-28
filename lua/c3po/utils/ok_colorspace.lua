@@ -103,7 +103,7 @@ end
 
 ---@param rgb srgb
 ---@return linear
-function M.srgb_to_linear(rgb)
+local function srgb_to_linear(rgb)
   local r, g, b = unpack(rgb)
   return { _srgb_to_linear(r), _srgb_to_linear(g), _srgb_to_linear(b) }
 end
@@ -120,14 +120,14 @@ end
 
 ---@param linear linear
 ---@return srgb
-function M.linear_to_srgb(linear)
+local function linear_to_srgb(linear)
   local r, g, b = unpack(linear)
   return { _linear_to_srgb(r), _linear_to_srgb(g), _linear_to_srgb(b) }
 end
 
 ---@param linear linear
 ---@return lab
-function M.linear_to_oklab(linear)
+local function linear_to_oklab(linear)
   local r, g, b = unpack(linear)
 
   local l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b
@@ -147,7 +147,7 @@ end
 
 ---@param lab lab
 ---@return srgb
-function M.oklab_to_linear(lab)
+local function oklab_to_linear(lab)
   local L, a, b = unpack(lab)
 
   local l_ = L + 0.3963377774 * a + 0.2158037573 * b
@@ -168,13 +168,13 @@ end
 ---@param rgb srgb
 ---@return lab
 function M.srgb_to_oklab(rgb)
-  return M.linear_to_oklab(M.srgb_to_linear(rgb))
+  return linear_to_oklab(srgb_to_linear(rgb))
 end
 
 ---@param lab lab
 ---@return srgb
 function M.oklab_to_srgb(lab)
-  return M.linear_to_srgb(M.oklab_to_linear(lab))
+  return linear_to_srgb(oklab_to_linear(lab))
 end
 
 ---Finds the maximum saturation possible for a given hue that fits in sRGB
@@ -266,7 +266,7 @@ local function find_cusp(a, b)
   local S_cusp = compute_max_saturation(a, b)
 
   -- Convert to linear sRGB to find the first point where at least one of r,g or b >= 1:
-  local rgb_at_max = M.oklab_to_linear({ 1, S_cusp * a, S_cusp * b })
+  local rgb_at_max = oklab_to_linear({ 1, S_cusp * a, S_cusp * b })
   local L_cusp = cbrt(1 / max(rgb_at_max[1], rgb_at_max[2], rgb_at_max[3]))
   local C_cusp = L_cusp * S_cusp
 
@@ -451,7 +451,7 @@ function M.srgb_to_okhsv(rgb)
   local L_vt = toe_inv(L_v)
   local C_vt = C_v * L_vt / L_v
 
-  local rgb_scale = M.oklab_to_linear({ L_vt, a_ * C_vt, b_ * C_vt })
+  local rgb_scale = oklab_to_linear({ L_vt, a_ * C_vt, b_ * C_vt })
   local scale_L = cbrt(1 / (max(rgb_scale[1], rgb_scale[2], rgb_scale[3], 0)))
 
   L = L / scale_L
@@ -489,7 +489,7 @@ function M.okhsv_to_srgb(hsv)
   C = C * L_new / L
   L = L_new
 
-  local rgb_scale = M.oklab_to_linear({ L_vt, a_ * C_vt, b_ * C_vt })
+  local rgb_scale = oklab_to_linear({ L_vt, a_ * C_vt, b_ * C_vt })
   local scale_L = cbrt(1 / (max(rgb_scale[1], rgb_scale[2], rgb_scale[3], 0)))
 
   -- remove to see effect without rescaling
