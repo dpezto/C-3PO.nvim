@@ -23,7 +23,7 @@ function PickerHandler.pick()
     local start_col, end_col, RGB, A, input, output
     for _, picker in ipairs(opts.pickers) do
       -- Readonly pickers match text that names a color rather than spelling one
-      -- out (xcolor's `\textcolor{azulUNAM}`). Picking would overwrite the name
+      -- out (xcolor's `\textcolor{R2D2}`). Picking would overwrite the name
       -- with a literal, so they only ever feed the highlighter.
       local s, e, rgb, a
       if not picker.readonly then

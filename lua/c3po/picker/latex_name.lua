@@ -3,8 +3,8 @@ local latex = require("c3po.picker.latex")
 local utils = require("c3po.utils")
 local pattern = require("c3po.utils.pattern")
 
----xcolor colors used by name. `\definecolor{azulUNAM}{RGB}{0, 112, 192}` sits in
----the preamble, `\textcolor{azulUNAM}{...}` in a chapter file, so resolving a name
+---xcolor colors used by name. `\definecolor{R2D2}{RGB}{0, 112, 192}` sits in
+---the preamble, `\textcolor{R2D2}{...}` in a chapter file, so resolving a name
 ---means looking beyond the current buffer.
 ---@class c3po.ColorPicker.LatexName: c3po.ColorPicker
 ---@field patterns string[]
@@ -17,13 +17,13 @@ LatexNamePicker.readonly = true
 local TEX_FT = { tex = true, latex = true, plaintex = true }
 
 -- A color name is what xcolor lets you write between the braces. `!` is excluded
--- on purpose: it opens a mixing expression (`azulUNAM!50!white`).
+-- on purpose: it opens a mixing expression (`R2D2!50!white`).
 local NAME = [=[[0-9A-Za-z@_-]+]=]
 -- \definecolor's optional [type] argument, and \color's optional [model] one.
 local OPT = [=[%(\[[^]]*\])?]=]
 
--- \C: names are case-sensitive, so 'ignorecase' must never merge azulUNAM with
--- azulunam. \zs and \ze are what make the reported span the bare name, which is
+-- \C: names are case-sensitive, so 'ignorecase' must never merge R2D2 with
+-- r2d2. \zs and \ze are what make the reported span the bare name, which is
 -- also what keeps the definition's `{RGB}{...}` visible to the latex picker: the
 -- handler resumes at the end of the name, not at the end of the command.
 local DEFINITION = [=[\C\v\\%(define|provide)color]=] .. OPT .. [=[\{\zs]=] .. NAME .. [=[\ze\}]=]
@@ -101,6 +101,8 @@ end
 local project = {}
 ---@type table<integer, table<string, RGB>> #Keyed by bufnr, only while modified
 local live = {}
+---@type table<integer, integer> #The changedtick each live entry was built from
+local live_tick = {}
 ---@type table<integer, string>
 local roots = {}
 
@@ -159,18 +161,29 @@ function LatexNamePicker.names(bufnr)
     project[root] = base
   end
 
-  -- An unmodified buffer is already covered by the project scan, so the common
-  -- case costs one table lookup.
-  if not vim.bo[bufnr].modified then
-    return base
-  end
-  local merged = live[bufnr]
-  if merged == nil then
+  -- The buffer is scanned whether or not it is modified: it may be a scratch
+  -- buffer, or sit outside the project root, or fall past the file cap, and in
+  -- every one of those cases the project scan has not seen it. The tick guard
+  -- makes the unmodified case a one-off.
+  -- ponytail: one full-buffer rescan per change, not per repaint -- the
+  -- changedtick guard collapses the several parse_color calls one keystroke makes
+  -- into a single scan. A few thousand lines is a few milliseconds; if that ever
+  -- bites, narrow the rescan to the range on_lines already hands the highlighter.
+  local tick = vim.api.nvim_buf_get_changedtick(bufnr)
+  if live_tick[bufnr] ~= tick then
     local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-    merged = vim.tbl_extend("force", base, LatexNamePicker.scan_lines(lines))
-    live[bufnr] = merged
+    local merged = vim.tbl_extend("force", base, LatexNamePicker.scan_lines(lines))
+    -- A definition changed, so every use of that name is the wrong color now --
+    -- including the ones this repaint will not reach, since on_lines only covers
+    -- the edited range. Scheduled because we are inside that very repaint.
+    if not vim.deep_equal(live[bufnr] or base, merged) then
+      vim.schedule(function()
+        require("c3po.highlighter"):update(bufnr, 0, -1)
+      end)
+    end
+    live[bufnr], live_tick[bufnr] = merged, tick
   end
-  return merged
+  return live[bufnr]
 end
 
 function LatexNamePicker:init()
@@ -179,25 +192,19 @@ function LatexNamePicker:init()
   end
   self.patterns = build_patterns()
 
-  local group = vim.api.nvim_create_augroup("c3po-latex-name", {})
+  -- Within a buffer the changedtick guard in names() keeps everything current.
+  -- A write is the one event that changes what *other* buffers can see, since
+  -- the project scan reads files rather than buffers.
   vim.api.nvim_create_autocmd("BufWritePost", {
-    group = group,
+    group = vim.api.nvim_create_augroup("c3po-latex-name", {}),
     pattern = { "*.tex", "*.sty" },
-    callback = function(ev)
-      project, live, roots = {}, {}, {}
-      require("c3po.highlighter"):update(ev.buf, 0, -1)
-    end,
-  })
-  -- ponytail: InsertLeave and BufWritePost only. A normal-mode edit to a
-  -- \definecolor (dd, :s) leaves its uses stale until the next insert or write.
-  -- TextChanged would close that gap at the cost of rescanning the whole buffer
-  -- after every normal-mode change.
-  vim.api.nvim_create_autocmd("InsertLeave", {
-    group = group,
-    callback = function(ev)
-      if TEX_FT[vim.bo[ev.buf].filetype] then
-        live[ev.buf] = nil
-        require("c3po.highlighter"):update(ev.buf, 0, -1)
+    callback = function()
+      project, live, live_tick, roots = {}, {}, {}, {}
+      local highlighter = require("c3po.highlighter")
+      for bufnr in pairs(highlighter.attached_buffer) do
+        if vim.api.nvim_buf_is_valid(bufnr) and TEX_FT[vim.bo[bufnr].filetype] then
+          highlighter:update(bufnr, 0, -1)
+        end
       end
     end,
   })
@@ -360,6 +367,10 @@ end
 
 ---Install the completion function on tex buffers, keeping whatever was there.
 function LatexNamePicker.setup_completion()
+  -- Completing without highlighting is a valid setup, and it still needs the
+  -- cache invalidated; parse_color would otherwise be the only thing that ever
+  -- calls init().
+  LatexNamePicker:init()
   vim.api.nvim_create_autocmd("FileType", {
     group = vim.api.nvim_create_augroup("c3po-latex-completion", {}),
     pattern = { "tex", "latex", "plaintex" },

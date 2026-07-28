@@ -398,6 +398,26 @@ describe("Color detection test", function()
       test_rgb(latex, " {HSB}{40, 240, 240} ", { 255, 255, 0 }, nil)
     end)
 
+    it("Hsb and tHsb models", function()
+      test_rgb(latex, " {Hsb}{120, 1, 1} ", { 0, 255, 0 }, nil)
+      test_rgb(latex, " {Hsb}{240, 0.5, 1} ", { 128, 128, 255 }, nil)
+      test_rgb(latex, " {Hsb}{400, 1, 1} ", nil, nil)
+      -- Tuned hue 180 maps to Hsb hue 120: green.
+      test_rgb(latex, " {tHsb}{180, 1, 1} ", { 0, 255, 0 }, nil)
+      -- Tuned hue 60 maps to Hsb hue 30: orange.
+      test_rgb(latex, " {tHsb}{60, 1, 1} ", { 255, 128, 0 }, nil)
+      test_rgb(latex, " {tHsb}{360, 1, 1} ", { 255, 0, 0 }, nil)
+    end)
+
+    it("wave model", function()
+      test_rgb(latex, " {wave}{580} ", { 255, 255, 0 }, nil)
+      test_rgb(latex, " {wave}{650} ", { 255, 0, 0 }, nil)
+      test_rgb(latex, " {wave}{445.5} ", { 0, 28, 255 }, nil)
+      -- The vision limits fade to black instead of failing to parse.
+      test_rgb(latex, " {wave}{380} ", { 77, 0, 77 }, nil)
+      test_rgb(latex, " {wave}{900} ", { 0, 0, 0 }, nil)
+    end)
+
     it("gray and Gray models", function()
       test_rgb(latex, " {gray}{0.5} ", { 128, 128, 128 }, nil)
       test_rgb(latex, " {gray}{1} ", { 255, 255, 255 }, nil)
@@ -418,11 +438,39 @@ describe("Color detection test", function()
       test_rgb(latex_cmyk, " {RGB}{255, 0, 0} ", nil, nil)
       -- The full picker is untouched by the restriction.
       test_rgb(latex, " {RGB}{255, 0, 0} ", { 255, 0, 0 }, nil)
+      -- The float view leaves the integer model alone, so listing it ahead of
+      -- "latex_rgb" is what tells the two apart during recognition.
+      local latex_rgb_float = require("c3po.picker.latex_rgb_float")
+      test_rgb(latex_rgb_float, " {rgb}{1, 0, 0} ", { 255, 0, 0 }, nil)
+      test_rgb(latex_rgb_float, " {RGB}{255, 0, 0} ", nil, nil)
+      local latex_gray = require("c3po.picker.latex_gray")
+      test_rgb(latex_gray, " {gray}{0.5} ", { 128, 128, 128 }, nil)
+      test_rgb(latex_gray, " {Gray}{8} ", { 136, 136, 136 }, nil)
+      test_rgb(latex_gray, " {rgb}{1, 0, 0} ", nil, nil)
+    end)
+
+    it("recognizes the picked format when enabled", function()
+      local config = require("c3po.config")
+      local latex_cmyk = require("c3po.picker.latex_cmyk")
+      local saved_pickers, saved_recognize = config.options.pickers, config.options.recognize
+      config.options.pickers = { latex_cmyk }
+      config.options.recognize = {
+        input = true,
+        output = true,
+        pattern = { [latex_cmyk] = { "cmyk", "latex_cmyk" } },
+      }
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, { [[\definecolor{x}{cmyk}{0, 1, 1, 0}]] })
+      vim.api.nvim_win_set_cursor(0, { 1, 20 })
+      local _, _, _, _, input, output = require("c3po.handler.picker").pick()
+      assert.equals("cmyk", input)
+      assert.equals("latex_cmyk", output)
+      config.options.pickers, config.options.recognize = saved_pickers, saved_recognize
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, {})
     end)
   end)
   describe("LaTeX named colors", function()
     local latex_name = require("c3po.picker.latex_name")
-    local AZUL = { 0, 112 / 255, 192 / 255 }
+    local DROID = { 0, 112 / 255, 192 / 255 }
     local real_names, saved_ft
 
     before_each(function()
@@ -430,7 +478,7 @@ describe("Color detection test", function()
       -- filesystem and independent of the project this test happens to run in.
       real_names = latex_name.names
       latex_name.names = function()
-        return { azulUNAM = AZUL }
+        return { R2D2 = DROID }
       end
       saved_ft = vim.bo.filetype
       vim.bo.filetype = "tex"
@@ -452,11 +500,11 @@ describe("Color detection test", function()
 
     it("scans every model \\definecolor accepts", function()
       local names = latex_name.scan_lines({
-        [[\definecolor{azulUNAM}{RGB}{0, 112, 192}]],
+        [[\definecolor{R2D2}{RGB}{0, 112, 192}]],
         [[\definecolor[ps]{oro}{HTML}{FFD700}]],
         [[\providecolor{medio}{gray}{0.5}]],
       })
-      assert.is_true(utils.near(112 / 255, names.azulUNAM[2], 1 / 255))
+      assert.is_true(utils.near(112 / 255, names.R2D2[2], 1 / 255))
       assert.is_true(utils.near(215 / 255, names.oro[2], 1 / 255))
       assert.same({ 0.5, 0.5, 0.5 }, names.medio)
     end)
@@ -478,27 +526,27 @@ describe("Color detection test", function()
     end)
 
     it("spans the bare name at the definition site", function()
-      assert.equals("azulUNAM", span([[\definecolor{azulUNAM}{RGB}{0, 112, 192}]]))
+      assert.equals("R2D2", span([[\definecolor{R2D2}{RGB}{0, 112, 192}]]))
     end)
 
     it("matches the commands that take a color name", function()
-      assert.equals("azulUNAM", span([[\textcolor{azulUNAM}{x}]]))
-      assert.equals("azulUNAM", span([[{\color{azulUNAM} x}]]))
-      assert.equals("azulUNAM", span([[\colorbox{azulUNAM}{x}]]))
-      assert.equals("azulUNAM", span([[\cellcolor{azulUNAM}]]))
+      assert.equals("R2D2", span([[\textcolor{R2D2}{x}]]))
+      assert.equals("R2D2", span([[{\color{R2D2} x}]]))
+      assert.equals("R2D2", span([[\colorbox{R2D2}{x}]]))
+      assert.equals("R2D2", span([[\cellcolor{R2D2}]]))
       -- \colorlet defines its first argument and reads its second; only the
       -- second one has a value this picker can resolve.
-      assert.equals("azulUNAM", span([[\colorlet{nuevo}{azulUNAM}]]))
+      assert.equals("R2D2", span([[\colorlet{astromech}{R2D2}]]))
     end)
 
     it("stops a mixing expression at the base name", function()
-      assert.equals("azulUNAM", span([[\textcolor{azulUNAM!50!white}{x}]]))
+      assert.equals("R2D2", span([[\textcolor{R2D2!50!white}{x}]]))
     end)
 
     it("keeps scanning the line past an unknown name", function()
-      local s = [[\textcolor{nope}{a} \textcolor{azulUNAM}{b}]]
+      local s = [[\textcolor{nope}{a} \textcolor{R2D2}{b}]]
       local start, end_ = latex_name:parse_color(s)
-      assert.equals("azulUNAM", s:sub(start, end_))
+      assert.equals("R2D2", s:sub(start, end_))
     end)
 
     it("leaves bracketed specifications to the latex picker", function()
@@ -507,24 +555,36 @@ describe("Color detection test", function()
 
     it("is inert outside tex buffers", function()
       vim.bo.filetype = "lua"
-      assert.is_nil(span([[\textcolor{azulUNAM}{x}]]))
+      assert.is_nil(span([[\textcolor{R2D2}{x}]]))
     end)
 
     it("highlights the name and the specification separately", function()
       local bufnr = vim.api.nvim_create_buf(false, true)
       vim.bo[bufnr].filetype = "tex"
-      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { [[\definecolor{azulUNAM}{RGB}{0, 112, 192}]] })
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { [[\definecolor{R2D2}{RGB}{0, 112, 192}]] })
       local infos = require("c3po.handler.picker").info_in_range(bufnr, 0, -1, { latex_name, latex })
       assert.equals(2, #infos)
-      assert.same({ 0, 13, 0, 21 }, infos[1].range)
-      assert.same({ 0, 22, 0, 40 }, infos[2].range)
+      assert.same({ 0, 13, 0, 17 }, infos[1].range)
+      assert.same({ 0, 18, 0, 36 }, infos[2].range)
+      vim.api.nvim_buf_delete(bufnr, { force = true })
+    end)
+
+    it("sees an edited definition without waiting for a write", function()
+      -- The real names(), not the stub the other cases install.
+      latex_name.names = real_names
+      local bufnr = vim.api.nvim_create_buf(false, true)
+      vim.bo[bufnr].filetype = "tex"
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { [[\definecolor{holo}{RGB}{255, 0, 0}]] })
+      assert.same({ 1, 0, 0 }, latex_name.names(bufnr).holo)
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { [[\definecolor{holo}{RGB}{0, 0, 255}]] })
+      assert.same({ 0, 0, 1 }, latex_name.names(bufnr).holo)
       vim.api.nvim_buf_delete(bufnr, { force = true })
     end)
 
     it("finds the completion prefix only inside a color argument", function()
       assert.equals(11, latex_name.arg_start([[\textcolor{az]], 13))
       assert.equals(7, latex_name.arg_start([[\color{]], 7))
-      assert.equals(17, latex_name.arg_start([[\colorlet{nuevo}{az]], 19))
+      assert.equals(21, latex_name.arg_start([[\colorlet{astromech}{R2]], 22))
       assert.is_nil(latex_name.arg_start([[\cite{kn]], 8))
       assert.is_nil(latex_name.arg_start([[plain text]], 10))
     end)
@@ -537,7 +597,7 @@ describe("Color detection test", function()
         response = r
       end)
       local item = vim.tbl_filter(function(i)
-        return i.label == "azulUNAM"
+        return i.label == "R2D2"
       end, response.items)[1]
       -- 16 is lsp.CompletionItemKind.Color.
       assert.equals(16, item.kind)
@@ -550,7 +610,7 @@ describe("Color detection test", function()
         response = r
       end)
       item = vim.tbl_filter(function(i)
-        return i.label == "azulUNAM"
+        return i.label == "R2D2"
       end, response.items)[1]
       assert.equals("C3Highlighterfg0070c0", item.kind_hl)
       require("c3po.highlighter").attached_buffer[0] = nil
@@ -566,7 +626,7 @@ describe("Color detection test", function()
       local config = require("c3po.config")
       local saved = config.options.pickers
       config.options.pickers = { latex_name }
-      vim.api.nvim_buf_set_lines(0, 0, -1, false, { [[\textcolor{azulUNAM}{x}]] })
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, { [[\textcolor{R2D2}{x}]] })
       vim.api.nvim_win_set_cursor(0, { 1, 13 })
       assert.is_nil(require("c3po.handler.picker").pick())
       config.options.pickers = saved
