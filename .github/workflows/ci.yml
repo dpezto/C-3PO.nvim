@@ -1,0 +1,75 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # weekly run so nvim-nightly API drift surfaces without waiting for a push
+    - cron: "0 6 * * 1"
+permissions:
+  contents: read
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: reviewdog/action-actionlint@50842263c20a7c46bd0065b9e624d3c569db061e # v1
+  stylua:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: JohnnyMorganz/stylua-action@76fd70c03e6340ceaf673366712db9b20560b402 # v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: latest
+          args: --check lua test
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # No Windows leg: the suite runs under vusted, which needs a luarocks
+        # tree the Windows runners do not give us cheaply.
+        os: [ubuntu-latest, macos-latest]
+        neovim: [stable, nightly]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: rhysd/action-setup-vim@febef33995d6649302e9d88dda81e071b68f16a7 # v1
+        with:
+          neovim: true
+          version: ${{ matrix.neovim }}
+      - uses: leafo/gh-actions-lua@8aace3457a2fcf3f3c4e9007ecc6b869ff6d74d6 # v11
+        with:
+          luaVersion: luajit
+      - uses: leafo/gh-actions-luarocks@4c082a5fad45388feaeb0798dbd82dbd7dc65bca # v5
+      - name: install vusted
+        run: luarocks --lua-version=5.1 install vusted
+      - if: ${{ !(matrix.os == 'ubuntu-latest' && matrix.neovim == 'stable') }}
+        name: test
+        run: make test
+      # One leg carries coverage; Neovim is LuaJIT, so that is Lua 5.1.
+      - if: matrix.os == 'ubuntu-latest' && matrix.neovim == 'stable'
+        name: test with coverage
+        run: |
+          luarocks --lua-version=5.1 install luacov
+          luarocks --lua-version=5.1 install luacov-reporter-lcov
+          COVERAGE=1 make test
+          luacov -r lcov
+          sed -i "s|^SF:$GITHUB_WORKSPACE/|SF:|" luacov.report.out
+      - if: matrix.os == 'ubuntu-latest' && matrix.neovim == 'stable'
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
+        with:
+          files: luacov.report.out
+          disable_search: true
+          fail_ci_if_error: false
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
+        with:
+          release-type: simple

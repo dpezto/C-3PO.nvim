@@ -5,3 +5,7 @@ doc/tags
 assets/*
 !assets/*.png
 !assets/*.gif
+
+# luacov artefacts (COVERAGE=1 make test)
+luacov.stats.out
+luacov.report.out
