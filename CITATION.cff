@@ -9,7 +9,7 @@ authors:
 repository-code: "https://github.com/dpezto/C-3PO.nvim"
 url: "https://github.com/dpezto/C-3PO.nvim"
 license: MIT
-version: 1.0.0 # x-release-please-version
+version: 1.0.1 # x-release-please-version
 date-released: "2026-07-28" # x-release-please-date
 references:
   - type: software
