@@ -261,6 +261,8 @@ Default: { "rgb", "hsl", "cmyk" }
 		- HSV    "hsv"
 		- OKHSV  "okhsv"
 		- XYZ    "xyz"
+		- Gray   "gray" (a single slider; xcolor's gray model, so a
+		         recognized {gray} pick never leaves its colorspace)
 
 
                                                             *c3po-option-outputs*
@@ -288,16 +290,36 @@ Default: { "hex", "hex_short", "css_rgb", "css_hsl" }
 		- LatexRGB          "latex_rgb"
 		- Latexrgb          "latex_rgb_float"
 		- LatexCMYK         "latex_cmyk"
+		- LatexCMY          "latex_cmy"
 		- LatexHTML         "latex_html"
+		- Latexhsb          "latex_hsb"
+		- LatexHsb          "latex_hsb360"
+		- LatexHSB          "latex_hsb240"
+		- LatextHsb         "latex_thsb"
 		- Latexgray         "latex_gray"
+		- LatexGray         "latex_gray15"
 
 	Latex* emit the model and arguments of an xcolor color specification,
-	for use with \definecolor and \color.
+	for use with \definecolor and \color. Where a name would differ only
+	by case ({hsb} vs {Hsb} vs {HSB}), the preset is suffixed with the
+	model's scale, because most filesystems treat latex_hsb and latex_Hsb
+	as the same file.
 		LatexRGB    {RGB}{255, 0, 0}
 		Latexrgb    {rgb}{1.000, 0.000, 0.000}
 		LatexCMYK   {cmyk}{0.000, 1.000, 1.000, 0.000}
+		LatexCMY    {cmy}{0.000, 1.000, 1.000}
 		LatexHTML   {HTML}{FF0000}
+		Latexhsb    {hsb}{0.333, 1.000, 1.000}
+		LatexHsb    {Hsb}{120.0, 1.000, 1.000}
+		LatexHSB    {HSB}{80, 240, 240}
+		LatextHsb   {tHsb}{180.0, 1.000, 1.000}
 		Latexgray   {gray}{0.300}
+		LatexGray   {Gray}{5}
+
+	There is no output for xcolor's wave model: a wavelength covers only
+	the pure spectral colors, so the conversion into it does not exist
+	(the xcolor manual says as much). The picker still reads {wave}
+	specifications.
 
 	c3po.output.hex and c3po.output.hex_short use lowercase (e.g. #ffffff)
 	by default, but can be set to use uppercase letters.
@@ -332,11 +354,14 @@ Default: {
 		- CssName   "css_name"
 		- Defaults  "defaults" (Neovim default colorscheme)
 		- Latex     "latex" (every xcolor model: {RGB}, {rgb},
-		            {HTML}, {cmyk}, {cmy}, {hsb}, {HSB}, {gray},
-		            {Gray})
-		            "latex_rgb", "latex_cmyk", "latex_html"
+		            {HTML}, {cmyk}, {cmy}, {hsb}, {Hsb}, {HSB},
+		            {tHsb}, {gray}, {Gray}, {wave})
+		            "latex_rgb", "latex_rgb_float", "latex_cmyk",
+		            "latex_cmy", "latex_html", "latex_hsb",
+		            "latex_hsb360", "latex_hsb240", "latex_thsb",
+		            "latex_gray", "latex_gray15", "latex_wave"
 		            (single-model views, for |c3po-option-convert|
-		            cycles)
+		            cycles and |c3po-option-recognize|)
 	- LatexName "latex_name" (xcolor colors used by name, see
 	            |c3po-option-pickers-latex_name|)
 	Css* conforms to CSS Color Module Level 4.
@@ -351,12 +376,12 @@ Default: {
 	"latex_name" highlights xcolor colors where they are used by name,
 	across the whole project. Given >latex
 		% preamble.tex
-		\definecolor{azulUNAM}{RGB}{0, 112, 192}
+		\definecolor{R2D2}{RGB}{0, 112, 192}
 
 		% chapter.tex
-		\textcolor{azulUNAM}{...}
+		\textcolor{R2D2}{...}
 <
-	both `azulUNAM` occurrences carry the color, even though only one of
+	both `R2D2` occurrences carry the color, even though only one of
 	the files is open. Pair it with "latex" to get the specification
 	highlighted as well: >lua
 		c3po.setup({
@@ -376,9 +401,12 @@ Default: {
 	root; and the unsaved definitions in the current buffer. The root is
 	found with .latexmkrc, latexmkrc, Tectonic.toml, .texlabroot,
 	texlabroot or .git, falling back to the file's own directory. At most
-	200 files are scanned. The scan is refreshed on |BufWritePost| and on
-	|InsertLeave|, so a definition changed in normal mode (`dd`, `:s`)
-	updates its uses on the next insert or write.
+	200 files are scanned.
+
+	Editing a definition repaints its uses immediately, everywhere in the
+	buffer, without waiting for a write or for insert mode to end. Other
+	open buffers cannot see the change until it reaches the disk, so they
+	are repainted on |BufWritePost|.
 
 	Recognised definitions:
 		- \definecolor{name}{model}{values}, for every model "latex"
@@ -390,7 +418,7 @@ Default: {
 		  \rowcolor, \cellcolor, \columncolor
 		- \colorlet{new}{old}, where `old` is the resolvable one
 		- a mixing expression highlights its base name only, so
-		  `azulUNAM!50!white` spans `azulUNAM`
+		  `R2D2!50!white` spans `R2D2`
 	Not supported:
 		- the `named` model (\definecolor{n}{named}{Blue}), which
 		  needs the dvipsnames/svgnames sets and their package options
@@ -541,27 +569,17 @@ Default: true
 	through |c3po-option-pickers|.
 
 
-                                                    *c3po-option-latex_completion*
-latex_completion ~
-boolean
-Default: false
-	Whether to complete the color names defined in the project inside
-	\textcolor{...} and friends, using the names collected by
-	|c3po-option-pickers-latex_name|.
+                                                                    *c3po-blink*
+Completing color names ~
 
-	When enabled, 'omnifunc' is wrapped rather than replaced on tex
-	buffers: outside a color argument the completion is handed back to
-	whatever function was there before, so vimtex keeps completing \cite
-	and \ref. The wrapping is scheduled, because vimtex sets 'omnifunc'
-	from its own ftplugin on the same |FileType| event.
-	NOTE: a previous 'omnifunc' set to a `v:lua.` value cannot be called
-	back and is left alone.
+	The names collected by |c3po-option-pickers-latex_name| can be
+	completed inside \textcolor{...} and every other command that takes a
+	color name. There are two ways in, and the source is the better one.
 
-	Wrapping 'omnifunc' covers |i_CTRL-X_CTRL-O|. A completion engine only
-	reaches it through its own omni source, and even then the items arrive
-	untyped, because the 'complete-items' `kind` field has no value that
-	means "color". blink.cmp users should register the source directly
-	instead, which needs no latex_completion at all: >lua
+	With blink.cmp (https://github.com/saghen/blink.cmp), register
+	`c3po.blink` as a provider. This needs no |c3po-option-latex_completion|
+	and no other setup: >lua
+		-- blink.cmp opts
 		sources = {
 		  per_filetype = {
 		    tex = { inherit_defaults = true, "c3po" },
@@ -596,8 +614,27 @@ Default: false
 		}
 <
 
-	The function is also usable directly, e.g. on 'completefunc' if you
-	would rather not touch 'omnifunc' at all: >lua
+                                                    *c3po-option-latex_completion*
+latex_completion ~
+boolean
+Default: false
+	The other way in: without a completion engine, this wraps 'omnifunc'
+	on tex buffers so |i_CTRL-X_CTRL-O| offers the color names. Leave it
+	off when using |c3po-blink|.
+
+	'omnifunc' is wrapped rather than replaced: outside a color argument
+	the completion is handed back to whatever function was there before,
+	so vimtex keeps completing \cite and \ref. The wrapping is scheduled,
+	because vimtex sets 'omnifunc' from its own ftplugin on the same
+	|FileType| event.
+	NOTE: a previous 'omnifunc' set to a `v:lua.` value cannot be called
+	back and is left alone.
+
+	A completion engine reaches 'omnifunc' only through its own omni
+	source, and even then the items arrive untyped, because the
+	'complete-items' `kind` field has no value that means "color" — which
+	is why |c3po-blink| exists.
+	The function is also usable directly, e.g. on 'completefunc': >lua
 		vim.bo.completefunc =
 		  "v:lua.require'c3po.picker.latex_name'.omnifunc"
 <
@@ -712,10 +749,41 @@ Default: {
 	css_lch   = { "lch",   "css_lch"   },
 	css_oklab = { "oklab", "css_oklab" },
 	css_oklch = { "oklch", "css_oklch" },
+	latex_rgb       = { "rgb",  "latex_rgb"       },
+	latex_rgb_float = { "rgb",  "latex_rgb_float" },
+	latex_cmyk      = { "cmyk", "latex_cmyk"      },
+	latex_cmy       = { "cmyk", "latex_cmy"       },
+	latex_html      = { "rgb",  "latex_html"      },
+	latex_hsb       = { "hsv",  "latex_hsb"       },
+	latex_hsb360    = { "hsv",  "latex_hsb360"    },
+	latex_hsb240    = { "hsv",  "latex_hsb240"    },
+	latex_thsb      = { "hsv",  "latex_thsb"      },
+	latex_gray      = { "gray", "latex_gray"      },
+	latex_gray15    = { "gray", "latex_gray15"    },
+	latex_wave      = { "hsv" },
 }
 	Define the correspondence between the picker and input, output.
 	Keys are picker names (or modules) and values are {input, output},
 	each of which is likewise a name or a module.
+
+	The full "latex" picker matches every xcolor model, so it cannot
+	name a single output and has no entry here. To recognize latex
+	formats, list the single-model views in |c3po-option-pickers| ahead
+	of "latex" (earliest match wins ties by list order): >lua
+		pickers = {
+		  "hex",
+		  "latex_rgb_float", "latex_rgb", "latex_cmyk", "latex_cmy",
+		  "latex_html", "latex_hsb", "latex_hsb360", "latex_hsb240",
+		  "latex_thsb", "latex_gray15", "latex_gray", "latex",
+		}
+<	Two orderings matter, because those pairs overlap: "latex_rgb_float"
+	before "latex_rgb" (the latter matches both {rgb} and {RGB}) and
+	"latex_gray15" before "latex_gray" (the latter matches both {gray}
+	and {Gray}).
+
+	latex_wave has an input but no output: xcolor has no conversion into
+	a wavelength, so a {wave} pick opens in hsv and keeps the current
+	output mode.
 
 
                                            *c3po-option-disable-default-mappings*
