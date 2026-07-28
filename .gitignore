@@ -1,2 +1,7 @@
 doc/tags
-vhs/.deps/
+
+# Only the rendered demos and the icon belong in assets; sources (.afdesign,
+# .svg) and .DS_Store do not.
+assets/*
+!assets/*.png
+!assets/*.gif
