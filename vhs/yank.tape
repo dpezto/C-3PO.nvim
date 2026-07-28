@@ -12,12 +12,9 @@ Set BorderRadius 14
 Set Padding 16
 
 Hide
-Type "nvim --clean -u vhs/demo-init.lua"
+Type "nvim -i NONE --cmd 'luafile vhs/demo-init.lua' vhs/yank.txt"
 Enter
-Sleep 2s
-Type "i#DEC1DE"
-Escape
-Type "0"
+Sleep 5s
 Type ":C3 highlighter enable"
 Enter
 Sleep 500ms

@@ -12,9 +12,12 @@ Set BorderRadius 14
 Set Padding 16
 
 Hide
-Type "nvim --clean -u vhs/demo-init-blink.lua vhs/demo.tex"
+Type "nvim -i NONE --cmd 'luafile vhs/demo-init.lua' vhs/demo.tex"
 Enter
-Sleep 3s
+Sleep 5s
+Type ":C3 highlighter enable"
+Enter
+Sleep 1s
 Type "12gg"
 Show
 

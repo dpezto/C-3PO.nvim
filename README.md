@@ -182,6 +182,14 @@ completing `\cite` and `\ref`.
 All recordings are generated with [vhs](https://github.com/charmbracelet/vhs)
 from the tapes in [`vhs/`](./vhs) — `make demo` re-records them.
 
+The tapes deliberately load **your** Neovim config rather than a pinned minimal
+one, so the demos show the plugin in a real editor — real colorscheme, real
+statusline, real completion engine. `vhs/demo-init.lua` is only a shim: it runs
+before plugins, silences startup notifications and stops language servers, none
+of which have anything to say about color. That means recording needs this repo
+checked out where your config picks it up (lazy.nvim's `dev`), and your gifs
+will not look identical to the ones above.
+
 ## Pick
 
 `:C3 pick` — sliders for the color under the cursor, `i`/`o` cycle the input

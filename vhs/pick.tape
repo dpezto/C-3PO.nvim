@@ -12,9 +12,12 @@ Set BorderRadius 14
 Set Padding 16
 
 Hide
-Type "nvim --clean -u vhs/demo-init.lua vhs/colors.txt"
+Type "nvim -i NONE --cmd 'luafile vhs/demo-init.lua' vhs/colors.txt"
 Enter
-Sleep 2s
+Sleep 5s
+Type ":C3 highlighter enable"
+Enter
+Sleep 1s
 Show
 
 Sleep 1s
