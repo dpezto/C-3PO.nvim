@@ -39,17 +39,16 @@ function Core:pick()
   if start_col == nil then
     start_col, end_col, rgb, alpha, input, output = require("c3po.handler.picker").pick()
   end
+  -- A recognized format that is not registered falls back to the first one,
+  -- as documented. Keeping the previous mode instead is not merely stale: a
+  -- lingering lossy input (gray) would project the picked color onto itself.
   if input then
     local index = self.color._inputs:findIndex(("x.name == %q"):format(input.name))
-    if index > 0 then
-      self.color._input_idx = index
-    end
+    self.color._input_idx = index > 0 and index or 1
   end
   if output then
     local index = self.color._outputs:findIndex(("x.name == %q"):format(output.name))
-    if index > 0 then
-      self.color._output_idx = index
-    end
+    self.color._output_idx = index > 0 and index or 1
   end
   local row, col = api.get_cursor()
   if start_col and end_col and rgb then
