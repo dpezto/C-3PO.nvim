@@ -1,4 +1,4 @@
-local utils = require("c3po.utils.test")
+local utils = dofile("test/helper.lua")
 local cmyk = require("c3po.input.cmyk")
 local hsl = require("c3po.input.hsl")
 local hsluv = require("c3po.input.hsluv")

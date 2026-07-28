@@ -1,5 +1,14 @@
 local M = {}
 
+---Feed keys and execute until the typeahead is empty. Termcodes are replaced
+---and mappings apply, so `<Plug>` and the picker's buffer-local maps work.
+---A sequence that passes through insert mode must arrive in one call: the
+---"x" flag ends insert mode once the typeahead drains.
+---@param keys string
+function M.feed(keys)
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(keys, true, false, true), "x", false)
+end
+
 ---@param a number
 ---@param b number
 ---@param limit number
