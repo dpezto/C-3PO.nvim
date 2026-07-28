@@ -1,4 +1,4 @@
-local utils = require("c3po.utils.test")
+local utils = dofile("test/helper.lua")
 local hex = require("c3po.picker.hex")
 local css_rgb = require("c3po.picker.css_rgb")
 local css_hsl = require("c3po.picker.css_hsl")

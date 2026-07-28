@@ -83,8 +83,11 @@ end
 
 ---@param opts c3po.Options.P
 function M.setup(opts)
-  -- Merge user options to default one.
-  local default = require("c3po.config.default")
+  -- Merge user options to default one. The copy matters: tbl_deep_extend takes
+  -- a branch that only one source has by reference, so resolving the lists
+  -- below would otherwise write the resolved modules back into the defaults,
+  -- and a second setup() would start from them.
+  local default = vim.deepcopy(require("c3po.config.default"))
   if opts.disable_default_mappings then
     default = vim.tbl_extend("force", {}, default, { mappings = {} })
   end
