@@ -27,13 +27,24 @@ mute()
 vim.api.nvim_create_autocmd("VimEnter", { callback = mute })
 
 -- No language server has anything to add to a color demo, and their progress
--- reports render on top of the text. texlab in particular declares no color
--- provider, so nothing is lost.
-vim.api.nvim_create_autocmd("LspAttach", {
-  callback = function(ev)
-    vim.lsp.stop_client(ev.data.client_id, true)
-  end,
-})
+-- and exit messages render on top of the text; killing a client after it
+-- attached is what put ltex's shutdown warning into a take. Servers are
+-- prevented from starting instead: enable() covers vim.lsp.config setups,
+-- start() covers lspconfig-style ones. This shim runs before the user config,
+-- so both are stubbed by the time it asks for a server.
+vim.lsp.enable = function() end
+vim.lsp.start = function() end
+
+-- Recordings should not leak the time of day, and a moving statusline clock
+-- makes retakes differ. Freeze os.date at 13:37, so lualine (and a clock icon
+-- that picks its glyph from the hour) renders the same in every take.
+local real_date, real_time = os.date, os.time
+local t = real_date("*t") --[[@as osdate]]
+t.hour, t.min, t.sec = 13, 37, 0
+local frozen = real_time(t)
+os.date = function(format, time) ---@diagnostic disable-line: duplicate-set-field
+  return real_date(format, time or frozen)
+end
 
 -- Narrow blink to this plugin's source on tex. A real config wants the buffer
 -- and symbol sources too, but in a recording they offer every color name a
