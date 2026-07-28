@@ -38,9 +38,13 @@ jobs:
         with:
           neovim: true
           version: ${{ matrix.neovim }}
+      # PUC Lua, not LuaJIT: luarocks' manifest is now big enough that LuaJIT
+      # refuses to load it ("more than 65536 constants"). This interpreter only
+      # installs vusted -- the tests themselves run inside Neovim, and the 5.1
+      # rock tree is what Neovim's LuaJIT reads.
       - uses: leafo/gh-actions-lua@8aace3457a2fcf3f3c4e9007ecc6b869ff6d74d6 # v11
         with:
-          luaVersion: luajit
+          luaVersion: "5.1"
       - uses: leafo/gh-actions-luarocks@4c082a5fad45388feaeb0798dbd82dbd7dc65bca # v5
       - name: install vusted
         run: luarocks --lua-version=5.1 install vusted
