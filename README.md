@@ -18,6 +18,10 @@
 
 # C-3PO.nvim
 
+[![CI](https://github.com/dpezto/C-3PO.nvim/actions/workflows/ci.yml/badge.svg)](https://github.com/dpezto/C-3PO.nvim/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/dpezto/C-3PO.nvim/branch/main/graph/badge.svg)](https://codecov.io/gh/dpezto/C-3PO.nvim)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 > _"I am C-3PO, human–cyborg relations. I am fluent in over six million forms
 > of communication."_
 
