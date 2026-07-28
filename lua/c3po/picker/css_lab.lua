@@ -1,45 +1,17 @@
-local utils = require("c3po.utils")
 local convert = require("c3po.utils.convert")
 local parse = require("c3po.utils.parse")
 local pattern = require("c3po.utils.pattern")
+local utils = require("c3po.utils")
 
----@class c3po.ColorPicker.CssLab: c3po.ColorPicker
----@field pattern string
-local CssLabPicker = {}
-
-function CssLabPicker:init()
-  if self.pattern then
-    return
-  end
-  self.pattern =
-    pattern.create("lab( [<per-num>|none]  [<per-num>|none]  [<per-num>|none] %[/ [<alpha-value>|none]]? )")
-end
-
----@param s string
----@param init? integer
----@return integer? start_col
----@return integer? end_col
----@return RGB? rgb
----@return Alpha? alpha
-function CssLabPicker:parse_color(s, init)
-  self:init()
-  init = init or 1
-  -- The shortest patten is 10 characters like `lab(0 0 0)`
-  while init <= #s - 9 do
-    local start_col, end_col, cap1, cap2, cap3, cap4 = pattern.find(s, self.pattern, init)
-    if not (start_col and end_col and cap1 and cap2 and cap3) then
-      return
-    end
-    local L = parse.percent(cap1, 100)
-    local a = parse.percent(cap2, 125)
-    local b = parse.percent(cap3, 125)
+return require("c3po.picker")({
+  min_len = 10, -- lab(0 0 0)
+  patterns = {
+    pattern.create("lab( [<per-num>|none]  [<per-num>|none]  [<per-num>|none] %[/ [<alpha-value>|none]]? )"),
+  },
+  to_rgb = function(c1, c2, c3, c4)
+    local L, a, b = parse.percent(c1, 100), parse.percent(c2, 125), parse.percent(c3, 125)
     if utils.valid_range(L, 0, 100) and utils.valid_range({ a, b }, -125, 125) then
-      local RGB = convert.lab2rgb({ L, a, b })
-      local A = parse.alpha(cap4)
-      return start_col, end_col, RGB, A
+      return convert.lab2rgb({ L, a, b }), parse.alpha(c4)
     end
-    init = end_col + 1
-  end
-end
-
-return CssLabPicker
+  end,
+})
