@@ -10,6 +10,17 @@ local api = require("c3po.utils.api")
 local Core = {}
 Core.__index = Core
 
+---@param list { name: string }[]
+---@param name string
+---@return integer? #1-indexed
+local function index_of(list, name)
+  for i, v in ipairs(list) do
+    if v.name == name then
+      return i
+    end
+  end
+end
+
 function Core.new()
   local opts = require("c3po.config").options
   local self = setmetatable({
@@ -43,12 +54,10 @@ function Core:pick()
   -- as documented. Keeping the previous mode instead is not merely stale: a
   -- lingering lossy input (gray) would project the picked color onto itself.
   if input then
-    local index = self.color._inputs:findIndex(("x.name == %q"):format(input.name))
-    self.color._input_idx = index > 0 and index or 1
+    self.color._input_idx = index_of(self.color._inputs, input.name) or 1
   end
   if output then
-    local index = self.color._outputs:findIndex(("x.name == %q"):format(output.name))
-    self.color._output_idx = index > 0 and index or 1
+    self.color._output_idx = index_of(self.color._outputs, output.name) or 1
   end
   local row, col = api.get_cursor()
   if start_col and end_col and rgb then

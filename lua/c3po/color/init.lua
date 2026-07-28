@@ -1,10 +1,9 @@
-local array = require("c3po.utils.array")
 local hex = require("c3po.utils.hex")
 
 ---@class c3po.Color
----@field _inputs estrela.array c3po.ColorInput[]
+---@field _inputs c3po.ColorInput[]
 ---@field _input_idx integer
----@field _outputs estrela.array c3po.ColorOutput[]
+---@field _outputs c3po.ColorOutput[]
 ---@field _output_idx integer
 ---@field alpha c3po.ColorAlpha
 local Color = {}
@@ -14,14 +13,14 @@ Color.__index = Color
 function Color.new()
   local opts = require("c3po.config").options
   local self = setmetatable({
-    _inputs = array.new(),
+    _inputs = {},
     _input_idx = 1,
-    _outputs = array.new(opts.outputs),
+    _outputs = opts.outputs,
     _output_idx = 1,
     alpha = require("c3po.color.alpha").new(),
   }, { __index = Color })
   for _, input in ipairs(opts.inputs) do
-    self._inputs:push(input:new())
+    self._inputs[#self._inputs + 1] = input:new()
   end
   local default_color = hex.parse(opts.default_color)
   self:set_rgb(default_color)
