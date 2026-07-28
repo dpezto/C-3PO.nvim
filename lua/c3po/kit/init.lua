@@ -137,12 +137,16 @@ function kit.concat(tbl1, tbl2)
   return new_tbl
 end
 
+-- vim.tbl_islist was deprecated in 0.10 and removed in 0.13; vim.islist is the
+-- replacement and exists in every version this plugin supports.
+local islist = vim.islist or vim.tbl_islist
+
 ---The value to array.
 ---@param value any
 ---@return table
 function kit.to_array(value)
   if type(value) == "table" then
-    if vim.tbl_islist(value) or vim.tbl_isempty(value) then
+    if islist(value) or vim.tbl_isempty(value) then
       return value
     end
   end
@@ -153,14 +157,14 @@ end
 ---@param value any
 ---@return boolean
 function kit.is_array(value)
-  return not not (type(value) == "table" and (vim.tbl_islist(value) or vim.tbl_isempty(value)))
+  return not not (type(value) == "table" and (islist(value) or vim.tbl_isempty(value)))
 end
 
 ---Check the value is dict.
 ---@param value any
 ---@return boolean
 function kit.is_dict(value)
-  return type(value) == "table" and (not vim.tbl_islist(value) or vim.tbl_isempty(value))
+  return type(value) == "table" and (not islist(value) or vim.tbl_isempty(value))
 end
 
 ---Reverse the array.

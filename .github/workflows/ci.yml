@@ -28,9 +28,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # No Windows leg: the suite runs under vusted, which needs a luarocks
-        # tree the Windows runners do not give us cheaply.
-        os: [ubuntu-latest, macos-latest]
+        # Linux only, on purpose. The plugin is pure Lua over Neovim's own APIs,
+        # so a second Unix adds runtime and no signal -- the drift that actually
+        # breaks it is Neovim's, which the nightly leg covers. Windows would be
+        # the leg worth having, and it is the one vusted makes expensive: it
+        # wants a luarocks tree the Windows runners do not hand over cheaply.
+        # The matrix keeps `os` so a platform can be added back without
+        # renaming the checks that branch protection requires.
+        os: [ubuntu-latest]
         neovim: [stable, nightly]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
