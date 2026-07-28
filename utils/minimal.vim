@@ -7,16 +7,16 @@ end
 
 execute 'set runtimepath+=' . s:plug_dir
 call plug#begin(s:plug_dir)
-Plug 'uga-rosa/ccc.nvim'
+Plug 'dpezto/C-3PO.nvim'
 Plug 'neovim/nvim-lspconfig'
 call plug#end()
 PlugInstall | quit
 
 lua <<EOF
-local ccc = require("ccc")
-local mapping = ccc.mapping
+local c3po = require("c3po")
+local mapping = c3po.mapping
 
-ccc.setup({
+c3po.setup({
     -- Minimal configurations required to reproduce the problem.
 })
 

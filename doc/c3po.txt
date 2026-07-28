@@ -1,0 +1,1114 @@
+*c3po.txt*					Create Color Code in neovim.
+
+==============================================================================
+Contents                                                          *c3po-contents*
+
+
+Introduction						|c3po-introduction|
+Installation						|c3po-installation|
+Setup							|c3po-setup|
+Option							|c3po-option|
+Command							|c3po-command|
+Key mapping						|c3po-key-mapping|
+Variable						|c3po-variable|
+Autocmd							|c3po-autocmd|
+Highlight						|c3po-highlight|
+Action							|c3po-action|
+
+
+
+==============================================================================
+Introduction                                                  *c3po-introduction*
+
+
+Use the colorful sliders to easily generate any desired color!
+
+Features:
+- No dependency.
+- One |:C3| command with subcommands, completion and a menu.
+- Dynamic highlighting of sliders, with clickable ends and mouse support.
+- Supports more than 10 color spaces (RGB, HSL, CMYK, etc.).
+- Seamless input/output mode change.
+- Restore previously used colors.
+- Transparent slider for css functions (e.g. `rgb()`, `hsl()`)
+- CSS Color Level 4 and LaTeX (xcolor) formats, in both directions.
+- Yank a color in any format without touching the buffer (|:C3-yank|).
+- Color Highlighter for many formats.
+- Programmable modules (input/output/picker)
+
+Requirements:
+- Neovim 0.12+
+
+Neovim 0.12 highlights the colors reported by language servers itself (see
+|vim.lsp.document_color|), so c3po does not duplicate that; it highlights the
+formats its own pickers detect and reads LSP colors when picking or yanking.
+
+
+
+==============================================================================
+Installation                                                  *c3po-installation*
+
+
+With lazy.nvim (https://github.com/folke/lazy.nvim):
+>lua
+	{
+	  "dpezto/C-3PO.nvim",
+	  cmd = "C3",
+	  opts = {
+	    highlighter = { auto_enable = true },
+	  },
+	}
+<
+With vim-plug (https://github.com/junegunn/vim-plug):
+>vim
+	Plug 'dpezto/C-3PO.nvim'
+<
+Any plugin manager works; there are no dependencies. Nothing is set up
+until |c3po-setup| runs, so `opts`/`config` (or an explicit
+`require("c3po").setup()`) is required.
+
+
+
+==============================================================================
+Setup                                                                *c3po-setup*
+
+
+Enable |'termguicolors'| and call `require("c3po").setup()`.
+See |c3po-options| for the options that can be used.
+>lua
+	-- Enable true color
+	vim.opt.termguicolors = true
+
+	local c3po = require("c3po")
+	local mapping = c3po.mapping
+
+	c3po.setup({
+	  -- Your preferred settings
+	  -- Example: enable highlighter
+	  highlighter = {
+	    auto_enable = true,
+	  },
+	})
+<
+
+
+
+==============================================================================
+Options                                                            *c3po-options*
+
+
+                                                      *c3po-option-default-color*
+default_color ~
+string
+Default: "#000000"
+	The default color used when a color cannot be picked. It must be HEX
+	format. See also |c3po-option-preserve|.
+
+
+                                                           *c3po-option-bar-char*
+bar_char ~
+string
+Default: "━"
+	The character used for the sliders.
+
+
+                                                         *c3po-option-point-char*
+point_char ~
+string
+Default: "█"
+	The character used for the cursor point on the sliders.
+
+
+                                                      *c3po-option-bar-cap-start*
+                                                        *c3po-option-bar-cap-end*
+bar_cap_start ~
+bar_cap_end ~
+string
+Default: "" (both)
+	The characters used for the first and last cell of the sliders, giving
+	them rounded ends so they read more like a physical slider. Both empty
+	by default, in which case bar_char is used there like anywhere else.
+
+	These are the first and last cells of the bar, not extra decoration
+	around it: they carry a value like every other cell, so the slider
+	stays bar_len cells wide and the point still reaches them. When the
+	point is at either extreme, point_char is drawn there instead.
+
+	Neovim cannot ask the terminal which glyphs the font actually has, so
+	this is opt-in rather than detected. Only set it if your font provides
+	the glyphs; otherwise you get tofu at both ends.
+
+	Nerd Font (and Fira Code) ship a slider set for exactly this:
+>lua
+	require("c3po").setup({
+		bar_cap_start = "\u{ee03}",
+		bar_char      = "\u{ee04}",
+		bar_cap_end   = "\u{ee05}",
+		point_char    = "█",
+	})
+<
+
+
+                                                        *c3po-option-point-color*
+point_color ~
+string
+Default: ""
+	The color of the cursor point on the sliders. It must be HEX format.
+	If it is empty string (""), like the other part of the sliders, it is
+	dynamically highlighted.
+
+
+                                                     *c3po-option-empty-point-bg*
+empty_point_bg ~
+boolean
+Default: true
+	Determine whether to display background of the points on the sliders.
+	If it is false, the background color will be the color where the point
+	steps on, which will make the bar look continuous.
+
+
+                                                *c3po-option-point-color-on-dark*
+point_color_on_dark ~
+string
+Default: "#ffffff"
+	The color of the cursor point on the sliders when the background color
+	is dark. It must be HEX format. If point_color is not empty, this
+	value will be overridden.
+
+
+                                               *c3po-option-point-color-on-light*
+point_color_on_light ~
+string
+Default: "#000000"
+	The color of the cursor point on the sliders when the background color
+	is light. It must be HEX format. If point_color is not empty, this
+	value will be overridden.
+
+
+                                                            *c3po-option-bar-len*
+bar_len ~
+integer
+Default: 30
+	The length of the slider (not byte length). This value number of
+	bar_chars form a slider.
+
+
+                                                           *c3po-option-win-opts*
+win_opts ~
+table
+Default: {
+	relative = "cursor",
+	row = 1,
+	col = 1,
+	style = "minimal",
+	border = "rounded",
+}
+	The options passed to the |nvim_open_win|. 'width' and 'height' cannot
+	be specified.
+
+
+                                                         *c3po-option-auto-close*
+auto_close ~
+boolean
+Default: true
+	If true, then leaving the c3po UI will automatically close the window.
+
+
+                                                           *c3po-option-preserve*
+preserve ~
+boolean
+Default: false
+	Whether to preserve the colors when the UI is closed. If this is true,
+	you can start where you left off last time.
+
+
+                                                       *c3po-option-save-on-quit*
+save_on_quit ~
+boolean
+Default: false
+	Whether to add colors to prev_colors when quit (|c3po-action-quit|).
+
+
+                                                         *c3po-option-alpha-show*
+alpha_show ~
+"auto" | "show" | "hide"
+Default: "auto"
+	This option determines whether the alpha slider is displayed when the
+	UI is opened. "show" and "hide" mean as they are. "auto" makes the
+	slider appear only when the alpha value can be picked up.
+
+
+                                                             *c3po-option-inputs*
+inputs ~
+table
+Default: { "rgb", "hsl", "cmyk" }
+	Each entry is either a preset name or a module. Names save pulling
+	c3po.input into scope, and both forms may be mixed.
+	List of color system to be activated. |c3po-action-cycle_input_mode|
+	cycles in this order. The first one is the default used at the first
+	startup. Once activated, it will keep the previous input mode.
+	The presets currently available are as follows:
+		- RGB    "rgb"
+		- HSL    "hsl"
+		- HWB    "hwb"
+		- Lab    "lab"
+		- LCH    "lch"
+		- OKLab  "oklab"
+		- OKLCH  "oklch"
+		- CMYK   "cmyk"
+		- HSLuv  "hsluv"
+		- OKHSL  "okhsl"
+		- HSV    "hsv"
+		- OKHSV  "okhsv"
+		- XYZ    "xyz"
+		- Gray   "gray" (a single slider; xcolor's gray model, so a
+		         recognized {gray} pick never leaves its colorspace)
+
+
+                                                            *c3po-option-outputs*
+outputs ~
+table
+Default: { "hex", "hex_short", "css_rgb", "css_hsl" }
+	Each entry is either a preset name or a module, like
+	|c3po-option-inputs|.
+	List of output format to be activated. |c3po-action-cycle_output_mode|
+	cycles in this order. The first one is the default used at the first
+	startup. Once activated, it will keep the previous output mode.
+	It is also the fallback format for |:C3-yank|.
+	The presets currently available are as follows:
+		- HEX (6/8 digits)  "hex"
+		      (3/4 digits)  "hex_short"
+		- CssRGB            "css_rgb"
+		- CssRGBA           "css_rgba"
+		- CssHSL            "css_hsl"
+		- CssHWB            "css_hwb"
+		- CssLab            "css_lab"
+		- CssLCH            "css_lch"
+		- CssOKLab          "css_oklab"
+		- CssOKLCH          "css_oklch"
+		- Float             "float"
+		- LatexRGB          "latex_rgb"
+		- Latexrgb          "latex_rgb_float"
+		- LatexCMYK         "latex_cmyk"
+		- LatexCMY          "latex_cmy"
+		- LatexHTML         "latex_html"
+		- Latexhsb          "latex_hsb"
+		- LatexHsb          "latex_hsb360"
+		- LatexHSB          "latex_hsb240"
+		- LatextHsb         "latex_thsb"
+		- Latexgray         "latex_gray"
+		- LatexGray         "latex_gray15"
+
+	Latex* emit the model and arguments of an xcolor color specification,
+	for use with \definecolor and \color. Where a name would differ only
+	by case ({hsb} vs {Hsb} vs {HSB}), the preset is suffixed with the
+	model's scale, because most filesystems treat latex_hsb and latex_Hsb
+	as the same file.
+		LatexRGB    {RGB}{255, 0, 0}
+		Latexrgb    {rgb}{1.000, 0.000, 0.000}
+		LatexCMYK   {cmyk}{0.000, 1.000, 1.000, 0.000}
+		LatexCMY    {cmy}{0.000, 1.000, 1.000}
+		LatexHTML   {HTML}{FF0000}
+		Latexhsb    {hsb}{0.333, 1.000, 1.000}
+		LatexHsb    {Hsb}{120.0, 1.000, 1.000}
+		LatexHSB    {HSB}{80, 240, 240}
+		LatextHsb   {tHsb}{180.0, 1.000, 1.000}
+		Latexgray   {gray}{0.300}
+		LatexGray   {Gray}{5}
+
+	There is no output for xcolor's wave model: a wavelength covers only
+	the pure spectral colors, so the conversion into it does not exist
+	(the xcolor manual says as much). The picker still reads {wave}
+	specifications.
+
+	c3po.output.hex and c3po.output.hex_short use lowercase (e.g. #ffffff)
+	by default, but can be set to use uppercase letters.
+>lua
+	c3po.output.hex.setup({ uppercase = true })
+	c3po.output.hex_short.setup({ uppercase = true })
+<
+
+
+                                                            *c3po-option-pickers*
+pickers ~
+table
+Default: {
+	"hex", "css_rgb", "css_hsl", "css_hwb",
+	"css_lab", "css_lch", "css_oklab", "css_oklch",
+}
+	Each entry is either a preset name or a module, like
+	|c3po-option-inputs|.
+	List of formats detected by |:C3-pick|, |:C3-yank| and the
+	highlighter.
+	The presets currently available are as follows:
+		- HEX       "hex"
+		            "hex_long" (#RRGGBB, #RRGGBBAA)
+		            "hex_short" (#RGB, #RGBA)
+		- CssRGB    "css_rgb"
+		- CssHSL    "css_hsl"
+		- CssHWB    "css_hwb"
+		- CssLab    "css_lab",
+		- CssLCH    "css_lch",
+		- CssOKLab  "css_oklab",
+		- CssOKLCH  "css_oklch",
+		- CssName   "css_name"
+		- Defaults  "defaults" (Neovim default colorscheme)
+		- Latex     "latex" (every xcolor model: {RGB}, {rgb},
+		            {HTML}, {cmyk}, {cmy}, {hsb}, {Hsb}, {HSB},
+		            {tHsb}, {gray}, {Gray}, {wave})
+		            "latex_rgb", "latex_rgb_float", "latex_cmyk",
+		            "latex_cmy", "latex_html", "latex_hsb",
+		            "latex_hsb360", "latex_hsb240", "latex_thsb",
+		            "latex_gray", "latex_gray15", "latex_wave"
+		            (single-model views, for |c3po-option-convert|
+		            cycles and |c3po-option-recognize|)
+	- LatexName "latex_name" (xcolor colors used by name, see
+	            |c3po-option-pickers-latex_name|)
+	Css* conforms to CSS Color Module Level 4.
+	https://www.w3.org/TR/css-color-4/
+	"latex" detects xcolor color specifications, with or without a
+	surrounding \definecolor. Use the single-model views in a convert
+	cycle so each latex format converts to the next one instead of to
+	itself.
+
+
+						 *c3po-option-pickers-latex_name*
+	"latex_name" highlights xcolor colors where they are used by name,
+	across the whole project. Given >latex
+		% preamble.tex
+		\definecolor{R2D2}{RGB}{0, 112, 192}
+
+		% chapter.tex
+		\textcolor{R2D2}{...}
+<
+	both `R2D2` occurrences carry the color, even though only one of
+	the files is open. Pair it with "latex" to get the specification
+	highlighted as well: >lua
+		c3po.setup({
+		  pickers = { "hex", "latex", "latex_name" },
+		})
+<
+	NOTE: This picker is only used for highlights. The span is a name,
+	not a color literal, so overwriting it with `#0070c0` would throw
+	away the indirection the document is built on. |:C3-pick| skips it,
+	and it must not appear in |c3po-option-convert|. Put the cursor on
+	the specification to pick a definition; use |:C3-yank| to read a
+	named color without touching the buffer.
+
+	Names come from three places, later ones winning: xcolor's 19 base
+	names (`red`, `teal`, `violet`, ...); every \definecolor and
+	\providecolor found in the *.tex and *.sty files under the project
+	root; and the unsaved definitions in the current buffer. The root is
+	found with .latexmkrc, latexmkrc, Tectonic.toml, .texlabroot,
+	texlabroot or .git, falling back to the file's own directory. At most
+	200 files are scanned.
+
+	Editing a definition repaints its uses immediately, everywhere in the
+	buffer, without waiting for a write or for insert mode to end. Other
+	open buffers cannot see the change until it reaches the disk, so they
+	are repainted on |BufWritePost|.
+
+	Recognised definitions:
+		- \definecolor{name}{model}{values}, for every model "latex"
+		  supports
+		- \definecolor[type]{name}{model}{values}
+		- \providecolor, and several definitions on one line
+	Recognised uses:
+		- \color, \textcolor, \colorbox, \pagecolor, \fcolorbox,
+		  \rowcolor, \cellcolor, \columncolor
+		- \colorlet{new}{old}, where `old` is the resolvable one
+		- a mixing expression highlights its base name only, so
+		  `R2D2!50!white` spans `R2D2`
+	Not supported:
+		- the `named` model (\definecolor{n}{named}{Blue}), which
+		  needs the dvipsnames/svgnames sets and their package options
+		- \colorlet as a definition source: it highlights both names
+		  when they are already known, but does not define one
+		- \definecolorset, \definecolorseries, \preparecolor
+		- definitions split across lines
+		- \input/\include following; the scan is a plain file glob
+		- \color[RGB]{0, 112, 192}, a bracket-delimited specification,
+		  which "latex" does not match either
+
+
+					     *c3po-option-pickers-custom_entries*
+	There is a special picker named `c3po.picker.custom_entries`. You can
+	define a table to convert from any word to a specific RGB color.
+>lua
+	c3po.setup({
+	  pickers = {
+	    c3po.picker.custom_entries({
+	      red = "#ff0000",
+	      green = "#00ff00",
+	    }),
+	  },
+	})
+<
+	This makes it highlight words both `red` and `green` to supplied RGB
+	colors. Also you can use them in |:C3-pick|.
+
+	It detects word boundaries not to highlight words including supplied
+	characters. So it does not highlight `red` in `Alfred`. This is achieved
+	by Vim's |/\<| and |/\>| patterns, so it is affected by |'iskeyword'|.
+
+	You cannot use any special character for RegExp patterns. When you use
+	them such as `%`, `[]`, and `^$`, it detects the characters as they are.
+
+
+					*c3po-option-pickers-trailing_whitespace*
+	There is a special picker named `c3po.picker.trailing_whitespace`. As
+	the name suggests, it picks trailing white spaces.
+	NOTE: This picker is only used for highlights. The reason is to pick
+	is meaningless.
+>lua
+	c3po.setup({
+	  pickers = {
+	    c3po.picker.trailing_whitespace({
+	      ---@type table<string, string>
+	      --- Keys are filetypes, values are colors (6-digit hex)
+	      palette = {},
+	      ---@type string
+	      --- Default color. 6-digit hex representation.
+	      default_color = "#db7093",
+	      ---@type string[]|true
+	      --- List of filetypes for which highlighting is enabled or true.
+	      enable = true,
+	      ---@type string[]|fun(bufnr: number): boolean
+	      --- Used only when enable is true. List of filetypes to disable
+	      --- highlighting or a function that returns true when you want
+	      --- to disable it.
+	      disable = {},
+	    }),
+	  },
+	})
+<
+
+
+						*c3po-option-pickers-ansi_escape*
+	There is a special picker named `c3po.picker.ansi_escape`. You can
+	define colors corresponding to ANSI escape code (16 colors).
+	Note: This picker is only used for highlights. The reason is that
+	foreground and background colors can be set at the same time, and the
+	color to be picked cannot be determined.
+>lua
+	c3po.setup({
+	  pickers = {
+	    c3po.picker.ansi_escape({
+	      foreground = "#c3poc3po",
+	      background = "#0c0c0c",
+	      black = "#0c0c0c",
+	      red = "#c50f1f",
+	      green = "#13a10e",
+	      yellow = "#c19c00",
+	      blue = "#0037da",
+	      magenta = "#881798",
+	      cyan = "#3a96dd",
+	      white = "#c3poc3po",
+	      bright_black = "#767676",
+	      bright_red = "#e74856",
+	      bright_green = "#16c60c",
+	      bright_yellow = "#f9f1a5",
+	      bright_blue = "#3b78ff",
+	      bright_magenta = "#b4009e",
+	      bright_cyan = "#61d6d6",
+	      bright_white = "#f2f2f2",
+	    }, {
+	      -- `\e[31;1m` means whether `red + bold` or `bright red`.
+	      ---@type "bold"|"bright" Meaning of code 1. default: "bright"
+	      meaning1 = "bright",
+	    })
+	  }
+	})
+<
+
+
+                                                        *c3po-option-output-line*
+output_line ~
+function
+Default: c3po.output_line
+	This function is used to create a row below the slider that displays
+	the colors before and after the change. See source code for details.
+
+
+                                                     *c3po-option-highlight-mode*
+highlight_mode ~
+"fg" | "bg" | "foreground" | "background" | "virtual"
+Default: "bg"
+	Option to highlight text foreground or background. It is used to
+	output_line and highlighter.
+	If "virtual", use colored virtual texts.
+
+
+                                                     *c3po-option-virtual_symbol*
+virtual_symbol ~
+string
+Default: " ● "
+	When |c3po-options-highlight_mode| is "virtual", this option controls
+	the text of the virt_text.
+
+
+                                                        *c3po-option-virtual_pos*
+virtual_pos ~
+"inline-left" | "inline-right" | "eol"
+Default: "inline-left"
+	When |c3po-options-highlight_mode| is "virtual", this option controls
+	where to put it out. You can choose whether to put the color inline on
+	the left or right side of the color, or at the end of the line.
+
+
+                                                                *c3po-option-lsp*
+lsp ~
+boolean
+Default: true
+	Whether |:C3-pick| and |:C3-yank| ask the attached language servers
+	for the color under the cursor before trying |c3po-option-pickers|.
+	Buffer highlighting of LSP colors is not c3po's job anymore: Neovim
+	does it natively, see |vim.lsp.document_color|.
+	NOTE: no LaTeX language server implements textDocument/documentColor
+	today (texlab declares no color provider), so xcolor colors always go
+	through |c3po-option-pickers|.
+
+
+                                                                    *c3po-blink*
+Completing color names ~
+
+	The names collected by |c3po-option-pickers-latex_name| can be
+	completed inside \textcolor{...} and every other command that takes a
+	color name. There are two ways in, and the source is the better one.
+
+	With blink.cmp (https://github.com/saghen/blink.cmp), register
+	`c3po.blink` as a provider. This needs no |c3po-option-latex_completion|
+	and no other setup: >lua
+		-- blink.cmp opts
+		sources = {
+		  per_filetype = {
+		    tex = { inherit_defaults = true, "c3po" },
+		  },
+		  providers = {
+		    c3po = { name = "Color", module = "c3po.blink" },
+		  },
+		}
+<
+	`c3po.blink` returns ordinary LSP completion items of kind Color, so
+	they carry the same icon and highlight as the color names a language
+	server offers. The module never requires blink.cmp, so it costs
+	nothing when it is not used.
+
+	While the highlighter is enabled for the buffer, each entry also sets
+	`kind_hl`, so its icon is drawn in the color the name stands for.
+	blink's default draw honours that with no configuration. The hex on
+	the right is a fixed highlight group instead, so tinting that one too
+	takes a draw override: >lua
+		completion = {
+		  menu = {
+		    draw = {
+		      components = {
+		        label_description = {
+		          highlight = function(ctx)
+		            return ctx.item.kind_hl or "BlinkCmpLabelDescription"
+		          end,
+		        },
+		      },
+		    },
+		  },
+		}
+<
+
+                                                    *c3po-option-latex_completion*
+latex_completion ~
+boolean
+Default: false
+	The other way in: without a completion engine, this wraps 'omnifunc'
+	on tex buffers so |i_CTRL-X_CTRL-O| offers the color names. Leave it
+	off when using |c3po-blink|.
+
+	'omnifunc' is wrapped rather than replaced: outside a color argument
+	the completion is handed back to whatever function was there before,
+	so vimtex keeps completing \cite and \ref. The wrapping is scheduled,
+	because vimtex sets 'omnifunc' from its own ftplugin on the same
+	|FileType| event.
+	NOTE: a previous 'omnifunc' set to a `v:lua.` value cannot be called
+	back and is left alone.
+
+	A completion engine reaches 'omnifunc' only through its own omni
+	source, and even then the items arrive untyped, because the
+	'complete-items' `kind` field has no value that means "color" — which
+	is why |c3po-blink| exists.
+	The function is also usable directly, e.g. on 'completefunc': >lua
+		vim.bo.completefunc =
+		  "v:lua.require'c3po.picker.latex_name'.omnifunc"
+<
+
+                                                        *c3po-option-highlighter*
+highlighter ~
+table
+	These are settings for |:C3-highlighter|.
+
+
+                                            *c3po-option-highlighter-auto_enable*
+highlighter.auto_enable ~
+boolean
+Default: false
+	Whether to enable automatically when a buffer gets a filetype. Only
+	normal buffers are picked up: terminals, prompts and plugin scratch
+	buffers ('buftype' is not empty) never are, nor are buffers without a
+	filetype.
+
+
+                                               *c3po-option-highlighter-max_byte*
+highlighter.max_byte ~
+integer
+Default: 100 * 1024 (100 KB)
+	The maximum buffer size for which highlight is enabled by
+	|c3po-option-highlighter-auto-enable|.
+
+
+                                              *c3po-option-highlighter-filetypes*
+highlighter.filetypes ~
+string[]
+Default: {}
+	File types for which highlighting is enabled. It is only used for
+	automatic highlighting by |c3po-option-highlighter-auto-enable|, and is
+	ignored for manual activation. An empty table means all file types.
+
+
+                                               *c3po-option-highlighter-excludes*
+highlighter.excludes ~
+string[]
+Default: {}
+	Used only when |c3po-option-highlighter-filetypes| is empty table. You
+	can specify file types to be excludes.
+
+
+                                          *c3po-option-highlighter-update_insert*
+highlighter.update_insert ~
+boolean
+Default: true
+	If true, highlights will be updated during insert mode. If false,
+	highlights will not be updated during editing in insert mode , but
+	will be updated on |InsertLeave|.
+
+
+                                                            *c3po-option-convert*
+convert ~
+table
+Default: { "hex", "css_rgb", "css_hsl" }
+	A list of names is a cycle: each format converts to the next, and
+	the last back to the first.
+
+	Pass {picker, output} pairs instead when the mapping is not a cycle,
+	or when a picker and its output are named differently:
+>lua
+	convert = {
+		{ "hex_short", "hex" },
+		{ "hex", "css_rgb" },
+	}
+<
+	Specify the correspondence between picker and output. The default
+	setting converts the color to css_rgb if it is in hex format, to
+	css_hsl if it is in css_rgb format, and to hex if it is in css_hsl
+	format.
+
+
+                                                          *c3po-option-recognize*
+recognize ~
+table
+	These are settings for recognize color format.
+
+
+                                                    *c3po-option-recognize-input*
+recognize.input ~
+boolean
+Default: false
+	If true, doing |:C3-pick|, it recognizes the color format and
+	automatically adjusts the input to it. If that format is not
+	registered in |c3po-option-inputs|, it will fall back to the first one.
+
+
+                                                   *c3po-option-recognize-output*
+recognize.output ~
+boolean
+Default: false
+	If true, doing |:C3-pick|, it recognizes the color format and
+	automatically adjusts the output to it. If that format is not
+	registered in |c3po-option-outputs|, it will fall back to the first one.
+
+
+                                                  *c3po-option-recognize-pattern*
+recognize.pattern ~
+table
+Default: {
+	css_rgb   = { "rgb",   "css_rgb"   },
+	css_name  = { "rgb",   "css_rgb"   },
+	hex       = { "rgb",   "hex"       },
+	hex_long  = { "rgb",   "hex"       },
+	hex_short = { "rgb",   "hex_short" },
+	css_hsl   = { "hsl",   "css_hsl"   },
+	css_hwb   = { "hwb",   "css_hwb"   },
+	css_lab   = { "lab",   "css_lab"   },
+	css_lch   = { "lch",   "css_lch"   },
+	css_oklab = { "oklab", "css_oklab" },
+	css_oklch = { "oklch", "css_oklch" },
+	latex_rgb       = { "rgb",  "latex_rgb"       },
+	latex_rgb_float = { "rgb",  "latex_rgb_float" },
+	latex_cmyk      = { "cmyk", "latex_cmyk"      },
+	latex_cmy       = { "cmyk", "latex_cmy"       },
+	latex_html      = { "rgb",  "latex_html"      },
+	latex_hsb       = { "hsv",  "latex_hsb"       },
+	latex_hsb360    = { "hsv",  "latex_hsb360"    },
+	latex_hsb240    = { "hsv",  "latex_hsb240"    },
+	latex_thsb      = { "hsv",  "latex_thsb"      },
+	latex_gray      = { "gray", "latex_gray"      },
+	latex_gray15    = { "gray", "latex_gray15"    },
+	latex_wave      = { "hsv" },
+}
+	Define the correspondence between the picker and input, output.
+	Keys are picker names (or modules) and values are {input, output},
+	each of which is likewise a name or a module.
+
+	The full "latex" picker matches every xcolor model, so it cannot
+	name a single output and has no entry here. To recognize latex
+	formats, list the single-model views in |c3po-option-pickers| ahead
+	of "latex" (earliest match wins ties by list order): >lua
+		pickers = {
+		  "hex",
+		  "latex_rgb_float", "latex_rgb", "latex_cmyk", "latex_cmy",
+		  "latex_html", "latex_hsb", "latex_hsb360", "latex_hsb240",
+		  "latex_thsb", "latex_gray15", "latex_gray", "latex",
+		}
+<	Two orderings matter, because those pairs overlap: "latex_rgb_float"
+	before "latex_rgb" (the latter matches both {rgb} and {RGB}) and
+	"latex_gray15" before "latex_gray" (the latter matches both {gray}
+	and {Gray}).
+
+	latex_wave has an input but no output: xcolor has no conversion into
+	a wavelength, so a {wave} pick opens in hsv and keeps the current
+	output mode.
+
+
+                                           *c3po-option-disable-default-mappings*
+disable_default_mappings ~
+boolean
+Default: false
+	If true, all default mappings are disabled.
+
+
+                                                           *c3po-option-mappings*
+mappings ~
+table
+Default: >lua
+	{
+	  ["<CR>"] = mapping.complete,
+	  ["q"]    = mapping.quit,
+	  ["l"]    = mapping.increase1,
+	  ["d"]    = mapping.increase5,
+	  [","]    = mapping.increase10,
+	  ["h"]    = mapping.decrease1,
+	  ["s"]    = mapping.decrease5,
+	  ["m"]    = mapping.decrease10,
+	  ["H"]    = mapping.set0,
+	  ["M"]    = mapping.set50,
+	  ["L"]    = mapping.set100,
+	  ["0"]    = mapping.set0,
+	  ["1"]    = utils.bind(mapping._set_percent, 10),
+	  -- ... "2" through "9" set 20% through 90%
+	  ["5"]    = mapping.set50,
+	  ["$"]    = mapping.set100,
+	  ["r"]    = mapping.reset_mode,
+	  ["a"]    = mapping.toggle_alpha,
+	  ["g"]    = mapping.toggle_prev_colors,
+	  ["b"]    = mapping.goto_prev,
+	  ["w"]    = mapping.goto_next,
+	  ["B"]    = mapping.goto_head,
+	  ["W"]    = mapping.goto_tail,
+	  ["i"]    = mapping.cycle_input_mode,
+	  ["o"]    = mapping.cycle_output_mode,
+	  ["<LeftMouse>"]       = mapping.click,
+	  ["<ScrollWheelDown>"] = mapping.decrease1,
+	  ["<ScrollWheelUp>"]   = mapping.increase1,
+	}
+<
+	The mappings are set in the UI of c3po. The table where lhs is key and
+	rhs is value. To disable all default mappings, use
+	|c3po-option-disable-default-mappings|. To disable only some of the
+	default mappings, set c3po.mapping.none.
+>lua
+	local c3po = require("c3po")
+	local mapping = c3po.mapping
+
+	c3po.setup({
+	  -- Disable all default mappings
+	  -- disable_default_mappings = true
+	  mappings = {
+	    -- Disable only 'q' (|c3po-action-quit|)
+	    q = mapping.none
+	  }
+	})
+<
+
+
+
+==============================================================================
+Command                                                            *c3po-command*
+
+
+                                                                         *:C3*
+:C3 [{subcommand}] [{args}]
+	Entry point for every c3po command. With no subcommand it opens a
+	picker listing them. Subcommands and their arguments complete with
+	<Tab>.
+
+
+                                                                    *:C3-pick*
+:C3 pick
+	Detects and replaces the color under the cursor. Detectable formats
+	are defined in |c3po-option-pickers|. If nothing is detected, the color
+	is inserted at a cursor position.
+
+
+                                                                 *:C3-convert*
+:C3 convert
+	Convert color formats directly without opening the UI. The conversion
+	rules are specified in |c3po-option-convert|.
+
+
+                                                                    *:C3-yank*
+:C3 yank [{output}]
+	Yank the color under the cursor without touching the buffer. The
+	color is formatted with {output} (any output preset name, e.g.
+	"css_hsl"); if omitted, the first entry of |c3po-option-outputs| is
+	used. The result goes to |v:register|.
+
+
+                                                             *:C3-highlighter*
+:C3 highlighter enable [{bufnr}]
+	Highlight colors in the buffer {bufnr}. If {bufnr} is omitted, the
+	target is the current buffer. The colors to be highlighted are those
+	registered in |c3po-option-pickers|; colors reported by language
+	servers are highlighted natively by |vim.lsp.document_color|.
+	Highlight is managed on a buffer-by-buffer basis, so you must use this
+	command each time to enable highlight on a new buffer. You can use
+	|c3po-option-highlighter-auto-enable| to enable automatically.
+	The following options are available.
+		|c3po-option-highlighter-auto-enable|
+		|c3po-option-highlighter-filetypes|
+		|c3po-option-highlighter-excludes|
+
+:C3 highlighter disable [{bufnr}]
+	Disable highlight.
+
+:C3 highlighter toggle [{bufnr}]
+	Toggle highlight.
+
+
+
+==============================================================================
+Key mapping                                                    *c3po-key-mapping*
+
+
+                                                            *<Plug>(c3po-insert)*
+<Plug>(c3po-insert) ~
+	Defined in |Insert-mode|. Insert the color without detection.
+
+						      *<Plug>(c3po-select-color)*
+<Plug>(c3po-select-color)
+	Defined in |Visual-mode| and |Operator-pending-mode|. Select the color
+	under the cursor.
+
+
+==============================================================================
+Variable                                                          *c3po-variable*
+
+
+                                                                   *g:c3po_color*
+g:c3po_color ~
+	The color currently being edited is stored in HEX format. If the c3po
+	UI is not open, it is empty string ("").
+
+
+
+==============================================================================
+Autocmd                                                            *c3po-autocmd*
+
+
+                                                               *C3ColorChanged*
+C3ColorChanged ~
+	After changing |g:c3po_color|.
+
+
+
+==============================================================================
+Highlight                                                        *c3po-highlight*
+
+
+                                              *C3FloatNormal* *hl-C3FloatNormal*
+C3FloatNormal ~
+	The highlight for float window.
+
+
+                                              *C3FloatBorder* *hl-C3FloatBorder*
+C3FloatBorder ~
+	The highlight for float window border.
+
+
+
+==============================================================================
+Action                                                              *c3po-action*
+
+
+All actions are implemented as lua functions.
+To customize, use |c3po-option-mappings|.
+>lua
+	local c3po = require("c3po")
+	local mapping = c3po.mapping
+<
+
+
+                                                           *c3po-action-complete*
+complete ~
+mapping.complete()
+Default mapping: <CR>
+	Close the UI and perform a replace or insert.
+	If open the previous colors palette, select the color under the cursor.
+
+
+                                                               *c3po-action-quit*
+quit ~
+mapping.quit()
+Default mapping: q
+	Alias of |:quit|. Cancel and close the UI without replace or insert.
+
+
+                                                   *c3po-action-cycle_input_mode*
+cycle_input_mode ~
+mapping.cycle_input_mode()
+Default mapping: i
+	Cycles input modes. See |c3po-option-inputs|.
+
+
+                                                 *c3po-action-cycle_ouotput_mode*
+cycle_output_mode ~
+mapping.cycle_output_mode()
+Default mapping: o
+	Cycles output modes. See |c3po-option-outputs|.
+
+
+							*c3po-action-reset_mode*
+reset_mode ~
+mapping.reset_mode()
+Default mapping: r
+	Reset input and output to default, and hide alpha slider and previous
+	colors palette.
+
+
+                                                       *c3po-action-toggle_alpha*
+toggle_alpha ~
+mapping.toggle_alpha()
+Default mapping: a
+	Toggle show/hide alpha (transparency) slider.
+
+
+                                                 *c3po-action-toggle_prev_colors*
+toggle_prev_colors ~
+mapping.toggle_prev_colors()
+Default mapping: g
+	Toggle show and hide the previous colors palette.
+	Use the following to move colors.
+		- |c3po-action-goto-next|
+		- |c3po-action-goto-prev|
+		- |c3po-action-goto-tail|
+		- |c3po-action-goto-head|
+
+
+                                                   *c3po-action-show_prev_colors*
+show_prev_colors ~
+mapping.show_prev_colors()
+Default mapping is nothing.
+	Show the previous colors palette.
+
+
+                                                   *c3po-action-hide_prev_colors*
+hide_prev_colors ~
+mapping.hide_prev_colors()
+Default mapping is nothing.
+	Hide the previous colors palette.
+
+
+                                                          *c3po-action-goto-next*
+goto_next ~
+mapping.goto_next()
+Default mapping: w
+	Go to next (right) color.
+
+
+                                                          *c3po-action-goto-prev*
+goto_prev ~
+mapping.goto_prev()
+Default mapping: b
+	Go to previous (left) color.
+
+
+                                                          *c3po-action-goto-tail*
+goto_tail ~
+mapping.goto_tail()
+Default mapping: W
+	Go to the last color.
+
+
+                                                          *c3po-action-goto-head*
+goto_head ~
+mapping.goto_head()
+Default mapping: B
+	Go to the first color.
+
+
+                                      *c3po-action-increase* *c3po-action-increase1*
+                                    *c3po-action-increase5* *c3po-action-increase10*
+increase ~
+mapping.increase1()
+mapping.increase5()
+mapping.increase10()
+mapping.delta(intger)
+Default mapping: l / d / , (1 / 5 / 10), <ScrollWheelUp> (1)
+	Increase the value times delta of the slider.
+	The delta is defined each color system, e.g. RGB is 1.
+
+
+                                      *c3po-action-decrease* *c3po-action-decrease1*
+                                    *c3po-action-decrease5* *c3po-action-decrease10*
+decrease ~
+mapping.decrease1()
+mapping.decrease5()
+mapping.decrease10()
+mapping.delta(intger)
+Default mapping: h / s / m (1 / 5 / 10), <ScrollWheelDown> (1)
+	Decrease the value times delta of the slider.
+	The delta is defined each color system, e.g. RGB is 1.
+
+
+                                                *c3po-action-set* *c3po-action-set0*
+	                                    *c3po-action-set50* *c3po-action-set100*
+set ~
+mapping.set0()
+mapping.set50()
+mapping.set100()
+c3po.set_percent(integer)
+Default mapping: H / M / L (0 / 50 / 100), 0 - 9 (0% - 90%), $ (100%)
+	Set the value of the slider as a percentage.
+	The digit row only reaches 90%; use $ or L for 100%.
+
+
+                                                             *c3po-action-click*
+click ~
+mapping.click()
+Default mapping: <LeftMouse>
+	Set the slider under the mouse to the clicked position. Clicking the
+	first or last cell selects the minimum or maximum; every other cell
+	selects the value it is colored with.
+
+	The cursor stays on the labels rather than following the mouse onto
+	the bar, so the float never scrolls sideways. On the previous colors
+	row the click selects the color under the mouse instead.
+
+
+vim:tw=78:ts=8:noet:ft=help:norl:

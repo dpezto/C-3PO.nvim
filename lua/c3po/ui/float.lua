@@ -1,0 +1,398 @@
+local utils = require("c3po.utils")
+local api = require("c3po.utils.api")
+local convert = require("c3po.utils.convert")
+
+---@class c3po.UI
+---@field prev_pos? c3po.Position For toggle_prev_colors()
+---@field augroup integer
+local UI = {}
+UI.__index = UI
+
+function UI.new()
+  return setmetatable({
+    ns_id = vim.api.nvim_create_namespace("c3po-ui-float-highlight"),
+    augroup = vim.api.nvim_create_augroup("c3po-ui-float-close", {}),
+    show_prev_colors = false,
+  }, UI)
+end
+
+function UI:open(color, prev_colors)
+  -- Avoid to nest c3po UI
+  if vim.api.nvim_win_is_valid(self.winid or -1) then
+    return
+  end
+  local opts = require("c3po.config").options
+  self.color = color
+  -- Store const. values for UI:buffer() in UI:update()
+  self.before_color = color:copy()
+  self.prev_colors = prev_colors
+  -- Create new buffer and window and set text
+  self.bufnr = vim.api.nvim_create_buf(false, true)
+  -- Mark the buffer before the window can be entered; anything reacting to
+  -- BufEnter/FileType (the highlighter's auto-enable included) must already
+  -- see it as c3po's own UI (#146).
+  vim.api.nvim_set_option_value("buftype", "nofile", { buf = self.bufnr })
+  vim.api.nvim_set_option_value("filetype", "c3po-ui", { buf = self.bufnr })
+  local buffer, width = self:buffer()
+  api.set_lines(self.bufnr, 0, -1, buffer)
+  self:highlight(width)
+  opts.win_opts.height = #buffer
+  opts.win_opts.width = width
+  self.winid = vim.api.nvim_open_win(self.bufnr, true, opts.win_opts)
+  vim.api.nvim_win_set_hl_ns(self.winid, self.ns_id)
+  -- Move cursor to the top color bar
+  api.set_cursor(1, 0)
+  vim.api.nvim_set_option_value("signcolumn", "no", { win = self.winid })
+  -- Set highlight
+  local float_normal = vim.api.nvim_get_hl(0, { name = "C3FloatNormal" }) --[[@as vim.api.keyset.highlight]]
+  local float_border = vim.api.nvim_get_hl(0, { name = "C3FloatBorder" }) --[[@as vim.api.keyset.highlight]]
+  vim.api.nvim_set_hl(self.ns_id, "Normal", float_normal)
+  vim.api.nvim_set_hl(self.ns_id, "EndOfBuffer", float_normal)
+  vim.api.nvim_set_hl(self.ns_id, "FloatBorder", float_border)
+  -- For callback
+  self.is_quit = true
+  -- Clean up on closing a window
+  vim.api.nvim_clear_autocmds({ group = self.augroup })
+  vim.api.nvim_create_autocmd("WinClosed", {
+    pattern = self.winid .. "",
+    group = self.augroup,
+    callback = utils.bind(self.on_close, self),
+    once = true,
+  })
+  if opts.auto_close then
+    vim.api.nvim_create_autocmd("WinLeave", {
+      buffer = self.bufnr,
+      group = self.augroup,
+      callback = utils.bind(self.close, self),
+      once = true,
+    })
+  end
+  -- Keep the cursor on the labels. A slider is identified by its row, so there
+  -- is nothing to point at further right, and a cursor out on a bar scrolls the
+  -- float sideways. Previous colors are the exception: there the column picks
+  -- which color is selected.
+  vim.api.nvim_create_autocmd("CursorMoved", {
+    buffer = self.bufnr,
+    group = self.augroup,
+    callback = function()
+      local row, col = api.get_cursor()
+      if col ~= 0 and self:point_at().type ~= "prev" then
+        api.set_cursor(row, 0)
+      end
+    end,
+  })
+end
+
+function UI:update()
+  if not vim.api.nvim_win_is_valid(self.winid or -1) then
+    return
+  end
+  local buffer, width = self:buffer()
+  api.set_lines(self.bufnr, 0, -1, buffer)
+  self:highlight(width)
+  vim.api.nvim_win_set_config(self.winid, { height = #buffer, width = width })
+end
+
+--- Close UI manually.
+function UI:close()
+  vim.api.nvim_clear_autocmds({ group = self.augroup })
+  -- A floating window is automatically closed by nvim_buf_delete().
+  vim.api.nvim_buf_delete(self.bufnr, { force = true })
+  self:on_close()
+end
+
+--- Called on closing UI.
+function UI:on_close()
+  self.bufnr = nil
+  self.winid = nil
+  self.before_color = nil
+  self.prev_colors = nil
+  if self.is_quit and self.on_quit_callback then
+    self.on_quit_callback()
+  end
+end
+
+---@param open? boolean If true/false, shows/hides view; if nil, toggles.
+function UI:toggle_prev_colors(open)
+  if open then
+    self.prev_pos = { api.get_cursor() }
+    self.show_prev_colors = true
+    self:update()
+    self.prev_colors._index = 1
+    self:set_point({ type = "prev", index = 1 })
+  elseif open == false then
+    self.show_prev_colors = false
+    self:update()
+    api.set_cursor(unpack(self.prev_pos))
+  else
+    open = not self.show_prev_colors
+    self:toggle_prev_colors(open)
+  end
+end
+
+-- Hides an alpha slider and prev colors.
+function UI:reset_view()
+  self.color.alpha:hide()
+  self.show_prev_colors = false
+  self:update()
+end
+
+---Where along a slider a byte column falls.
+---Counts characters in the rendered line rather than assuming a cell width, so
+---it stays correct whatever bar_char, point_char and the caps are set to.
+---@param row integer 0-indexed
+---@param byte_col integer 0-indexed
+---@return number? ratio #0-1, or nil when the column is not on the slider
+function UI:ratio_at(row, byte_col)
+  local opts = require("c3po.config").options
+  local bar_start = #self.color:input().bar_name[1] + 10
+  if byte_col < bar_start then
+    return
+  end
+  local line = vim.api.nvim_buf_get_lines(self.bufnr, row, row + 1, false)[1]
+  if line == nil then
+    return
+  end
+  local cell = vim.fn.strchars(line:sub(bar_start + 1, byte_col)) + 1
+  if cell > opts.bar_len then
+    return
+  end
+  -- The end cells snap to the extremes so the whole range stays clickable;
+  -- every other cell maps to the value it is coloured with, so clicking a cell
+  -- selects the colour that cell is showing and puts the point back on it.
+  if cell == 1 then
+    return 0
+  elseif cell == opts.bar_len then
+    return 1
+  end
+  return (cell - 0.5) / opts.bar_len
+end
+
+function UI:point_at()
+  local row, col = api.get_cursor()
+  local num_color = #self.color:input():get()
+  if row > 0 and row < num_color + 1 then
+    return { type = "color", index = row }
+  elseif not self.color.alpha.is_hide and row == num_color + 1 then
+    return { type = "alpha" }
+  elseif self.show_prev_colors and row == vim.fn.line("$") - 1 then
+    return { type = "prev", index = math.floor(col / 8) + 1 }
+  end
+  return { type = "none" }
+end
+
+function UI:set_point(point)
+  local row, col = 0, 0
+  if point.type == "color" then
+    row = point.index
+  elseif point.type == "alpha" and not self.color.alpha.is_hide then
+    row = #self.color:input().value + 1
+  elseif point.type == "prev" and self.show_prev_colors then
+    row = vim.api.nvim_buf_line_count(self.bufnr) - 1
+    col = point.index * 8 - 8
+  end
+  api.set_cursor(row, col)
+end
+
+---@param value number
+---@param min number
+---@param max number
+---@return integer #1-indexed cell holding the point
+local function adjust2bar(value, min, max)
+  local opts = require("c3po.config").options
+  local idx = utils.round((value - min) / (max - min) * opts.bar_len)
+  -- A value at min rounds to 0, which is not a cell. Clamping here keeps the
+  -- rendered bar and the highlight ranges agreeing on where the point is.
+  return utils.clamp(idx, 1, opts.bar_len)
+end
+
+---The characters making up one slider, one per cell.
+---Both the rendered text and the highlight ranges are derived from this, so
+---they cannot disagree about which character (and byte width) sits in a cell.
+---@param point_idx integer
+---@return string[] cells
+local function bar_cells(point_idx)
+  local opts = require("c3po.config").options
+  local cells = {}
+  for i = 1, opts.bar_len do
+    cells[i] = opts.bar_char
+  end
+  -- The caps are the first and last cells of the bar, not extra decoration
+  -- around it: they carry a value like every other cell, and only the glyph
+  -- differs. So the point still reaches them and takes precedence there.
+  if opts.bar_cap_start ~= "" then
+    cells[1] = opts.bar_cap_start
+  end
+  if opts.bar_cap_end ~= "" then
+    cells[opts.bar_len] = opts.bar_cap_end
+  end
+  cells[point_idx] = opts.point_char
+  return cells
+end
+
+---@param value number
+---@param min number
+---@param max number
+---@return string
+local function create_bar(value, min, max)
+  return table.concat(bar_cells(adjust2bar(value, min, max)))
+end
+
+---@private
+---@return string[]
+---@return integer
+function UI:buffer()
+  local opts = require("c3po.config").options
+  local input = self.color:input()
+
+  local buffer = {}
+  -- Title
+  table.insert(buffer, input.name)
+  -- Color sliders
+  for i, v in ipairs(input.value) do
+    local line = ("%s : %s %s"):format(input.bar_name[i], input.format(v, i), create_bar(v, input.min[i], input.max[i]))
+    table.insert(buffer, line)
+  end
+  local width = vim.api.nvim_strwidth(buffer[2])
+  -- Alpha slider
+  local alpha = self.color.alpha:get()
+  if alpha then
+    local line = ("A%s : %s %s"):format(
+      (" "):rep(#input.bar_name[1] - 1),
+      self.color.alpha:str(),
+      create_bar(alpha, 0, 1)
+    )
+    table.insert(buffer, line)
+  end
+  -- Output
+  local output_line = opts.output_line(self.before_color, self.color, width)
+  table.insert(buffer, output_line)
+  -- Prev colors
+  if self.show_prev_colors then
+    table.insert(buffer, self.prev_colors:str())
+  end
+
+  return buffer, width
+end
+
+---@private
+---@param width integer
+function UI:highlight(width)
+  local opts = require("c3po.config").options
+  vim.api.nvim_buf_clear_namespace(self.bufnr, self.ns_id, 0, -1)
+
+  -- No highlight for title
+  local row = 0
+
+  -- Color sliders
+  local bar_name_len = #self.color:input().bar_name[1]
+  for i, v in ipairs(self.color:get()) do
+    row = row + 1
+    local min = self.color:input().min[i]
+    local max = self.color:input().max[i]
+    local point_idx = adjust2bar(v, min, max)
+
+    -- {bar_name} + " : " + {formatted_value} + " "
+    -- {formatted_value} is must be 6 byte (See `c3po.ColorInput.format()`)
+    -- So, +10 (0-indexed)
+    local cells = bar_cells(point_idx)
+    local start_col, end_col = bar_name_len + 10, 0
+    for j = 1, opts.bar_len do
+      end_col = start_col + #cells[j]
+      -- Calculate a new color for highlight of a slider
+      local new_value = (j - 0.5) / opts.bar_len * (max - min) + min
+      local hex = self.color:hex(i, new_value)
+      local hl = { fg = hex }
+      if j == point_idx then
+        if not opts.empty_point_bg then
+          local RGB = self.color:get_rgb()
+          local R, G, B = convert.rgb_format(RGB)
+          hl = {
+            fg = utils.is_bright_RGB(R, G, B) and opts.point_color_on_light or opts.point_color_on_dark,
+            bg = hex,
+          }
+        end
+        if opts.point_color ~= "" then
+          hl.fg = opts.point_color
+        end
+      end
+      -- Set highlight
+      local color_name = "C3Bar" .. i .. "_" .. j
+      api.set_hl(self.bufnr, self.ns_id, { row, start_col, row, end_col }, color_name, hl)
+
+      start_col = end_col
+    end
+  end
+
+  -- Alpha slider
+  local alpha = self.color.alpha:get()
+  if alpha then
+    row = row + 1
+    local point_idx = adjust2bar(alpha, 0, 1)
+
+    local cells = bar_cells(point_idx)
+    local start_col, end_col = bar_name_len + 10, 0
+    for i = 1, opts.bar_len do
+      end_col = start_col + #cells[i]
+      -- Calculate a new color for highlight of an alpha slider
+      local alpha_ratio = (i - 0.5) / opts.bar_len
+      local hex = self.color.alpha:hex(alpha_ratio)
+      local hl = { fg = hex }
+      if i == point_idx then
+        if not opts.empty_point_bg then
+          hl = {
+            fg = alpha_ratio > 0.5 and opts.point_color_on_dark or opts.point_color_on_light,
+            bg = hex,
+          }
+        end
+        if opts.point_color ~= "" then
+          hl.fg = opts.point_color
+        end
+      end
+      local color_name = "C3Alpha" .. i
+      api.set_hl(self.bufnr, self.ns_id, { row, start_col, row, end_col }, color_name, hl)
+
+      start_col = end_col
+    end
+  end
+
+  -- Output
+  row = row + 1
+
+  -- {bar_name} : {color_name: 6byte} {slider}
+  local _, b_start, b_end, a_start, a_end = opts.output_line(self.before_color, self.color, width)
+
+  api.set_hl(
+    self.bufnr,
+    self.ns_id,
+    { row, b_start, row, b_end },
+    "C3Before",
+    utils.create_highlight(self.before_color:hex(), opts.highlight_mode)
+  )
+  api.set_hl(
+    self.bufnr,
+    self.ns_id,
+    { row, a_start, row, a_end },
+    "C3After",
+    utils.create_highlight(self.color:hex(), opts.highlight_mode)
+  )
+
+  -- Prev colors
+  if self.show_prev_colors then
+    row = row + 1
+    local start_col, end_col = 0, 7
+    for i, c in ipairs(self.prev_colors:get_all()) do
+      api.set_hl(
+        self.bufnr,
+        self.ns_id,
+        { row, start_col, row, end_col },
+        "C3Prev" .. i,
+        utils.create_highlight(c:hex(), opts.highlight_mode)
+      )
+      start_col = end_col + 1
+      end_col = start_col + 7
+    end
+  end
+end
+
+return UI

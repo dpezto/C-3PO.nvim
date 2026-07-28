@@ -1,0 +1,5 @@
+-- luacov config (COVERAGE=1 make test); only measure the plugin's own modules
+return {
+  include = { "lua/c3po/" },
+  statsfile = "luacov.stats.out",
+}

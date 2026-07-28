@@ -1,0 +1,97 @@
+---@class c3po.Options
+---@field default_color string hex
+---@field bar_char string
+---@field point_char string
+---@field bar_cap_start string
+---@field bar_cap_end string
+---@field point_color string hex
+---@field empty_point_bg boolean
+---@field point_color_on_dark string hex
+---@field point_color_on_light string hex
+---@field bar_len integer
+---@field win_opts vim.api.keyset.win_config
+---@field auto_close boolean
+---@field preserve boolean
+---@field save_on_quit boolean
+---@field max_prev_colors integer
+---@field alpha_show c3po.Option.show_mode
+---@field inputs c3po.ColorInput[]
+---@field outputs c3po.ColorOutput[]
+---@field pickers c3po.ColorPicker[]
+---@field ui c3po.UI
+---@field lsp boolean
+---@field latex_completion boolean
+---@field output_line fun(before_color: c3po.Color, after_color: c3po.Color, width: integer): string, integer, integer, integer, integer
+---@field highlight_mode c3po.Option.hl_mode
+---@field virtual_symbol string
+---@field virtual_pos c3po.Option.virtual_pos
+---@field highlighter c3po.Option.highlighter
+---@field convert { [1]: c3po.ColorPicker, [2]: c3po.ColorOutput }[]
+---@field recognize c3po.Option.recognize
+---@field mappings table<string, function>
+---@field disable_default_mappings boolean
+
+---@alias c3po.Option.show_mode "auto" | "show" | "hide"
+---@alias c3po.Option.hl_mode "fg" | "foreground" | "bg" | "background" | "virtual"
+---@alias c3po.Option.virtual_pos "inline-left" | "inline-right" | "eol"
+
+---@class c3po.Option.highlighter
+---@field auto_enable boolean
+---@field max_byte integer
+---@field filetypes string[]
+---@field excludes string[]
+---@field picker boolean
+---@field update_insert boolean
+
+---@class c3po.Option.recognize
+---@field input boolean
+---@field output boolean
+---@field pattern table<c3po.ColorPicker, { [1]: c3po.ColorInput, [2]: c3po.ColorOutput }>
+
+--{{{ Partial<c3po.Option>
+---@class c3po.Options.P
+---@field default_color? string hex
+---@field bar_char? string
+---@field point_char? string
+---@field bar_cap_start? string
+---@field bar_cap_end? string
+---@field point_color? string hex
+---@field empty_point_bg? boolean
+---@field point_color_on_dark? string hex
+---@field point_color_on_light? string hex
+---@field bar_len? integer
+---@field win_opts? vim.api.keyset.win_config
+---@field auto_close? boolean
+---@field preserve? boolean
+---@field save_on_quit? boolean
+---@field max_prev_colors? integer
+---@field alpha_show? c3po.Option.show_mode
+---@field inputs? (string|c3po.ColorInput)[]
+---@field outputs? (string|c3po.ColorOutput)[]
+---@field pickers? (string|c3po.ColorPicker)[]
+---@field ui? c3po.UI
+---@field lsp? boolean
+---@field latex_completion? boolean
+---@field output_line? fun(before_color: c3po.Color, after_color: c3po.Color, width: integer): string, integer, integer, integer, integer
+---@field highlight_mode? c3po.Option.hl_mode
+---@field virtual_symbol? string
+---@field virtual_pos? "inline-left" | "inline-right" | "eol"
+---@field highlighter? c3po.Option.highlighter.P
+---@field convert? string[] | { [1]: string|c3po.ColorPicker, [2]: string|c3po.ColorOutput }[]
+---@field recognize? c3po.Option.recognize.P
+---@field mappings? table<string, function>
+---@field disable_default_mappings? boolean
+
+---@class c3po.Option.highlighter.P
+---@field auto_enable? boolean
+---@field max_byte? integer
+---@field filetypes? string[]
+---@field excludes? string[]
+---@field picker? boolean
+---@field update_insert? boolean
+
+---@class c3po.Option.recognize.P
+---@field input? boolean
+---@field output? boolean
+---@field pattern? table<string|c3po.ColorPicker, { [1]: string|c3po.ColorInput, [2]: string|c3po.ColorOutput }>
+-- }}}

@@ -1,19 +1,19 @@
-local utils = require("ccc.utils.test")
-local cmyk = require("ccc.input.cmyk")
-local hsl = require("ccc.input.hsl")
-local hsluv = require("ccc.input.hsluv")
-local hsv = require("ccc.input.hsv")
-local hwb = require("ccc.input.hwb")
-local lab = require("ccc.input.lab")
-local lch = require("ccc.input.lch")
-local okhsl = require("ccc.input.okhsl")
-local okhsv = require("ccc.input.okhsv")
-local oklab = require("ccc.input.oklab")
-local oklch = require("ccc.input.oklch")
-local rgb = require("ccc.input.rgb")
-local xyz = require("ccc.input.xyz")
+local utils = require("c3po.utils.test")
+local cmyk = require("c3po.input.cmyk")
+local hsl = require("c3po.input.hsl")
+local hsluv = require("c3po.input.hsluv")
+local hsv = require("c3po.input.hsv")
+local hwb = require("c3po.input.hwb")
+local lab = require("c3po.input.lab")
+local lch = require("c3po.input.lch")
+local okhsl = require("c3po.input.okhsl")
+local okhsv = require("c3po.input.okhsv")
+local oklab = require("c3po.input.oklab")
+local oklch = require("c3po.input.oklch")
+local rgb = require("c3po.input.rgb")
+local xyz = require("c3po.input.xyz")
 
----@param colorInput ccc.ColorInput
+---@param colorInput c3po.ColorInput
 ---@param input number[] [n, i]
 ---@param expected string
 local function format_test(colorInput, input, expected)
@@ -43,7 +43,7 @@ local function normalize_limit(limit, len)
   return limit
 end
 
----@param colorInput ccc.ColorInput
+---@param colorInput c3po.ColorInput
 ---@param input number[] #RGB range in [0, 255]
 ---@param expected number[]
 ---@param limit? number|number[]
@@ -58,7 +58,7 @@ local function from_rgb_test(colorInput, input, expected, limit)
   end
 end
 
----@param colorInput ccc.ColorInput
+---@param colorInput c3po.ColorInput
 ---@param input number[]
 ---@param expected number[] #RGB range in [0, 255]
 ---@param limit? number|number[]
@@ -74,6 +74,20 @@ local function to_rgb_test(colorInput, input, expected, limit)
 end
 
 describe("input", function()
+  describe("gray", function()
+    local gray = require("c3po.input.gray")
+    it("format", function()
+      format_test(gray, { 0.5 }, " 50.0%")
+    end)
+    it("from_rgb is xcolor's luma", function()
+      from_rgb_test(gray, { 255, 255, 255 }, { 1 })
+      from_rgb_test(gray, { 255, 0, 0 }, { 0.3 })
+    end)
+    it("to_rgb", function()
+      to_rgb_test(gray, { 0.5 }, { 128, 128, 128 })
+    end)
+  end)
+
   describe("cmyk", function()
     it("format", function()
       format_test(cmyk, { 0.5 }, " 50.0%")

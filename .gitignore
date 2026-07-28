@@ -1,1 +1,11 @@
 doc/tags
+
+# Only the rendered demos and the icon belong in assets; sources (.afdesign,
+# .svg) and .DS_Store do not.
+assets/*
+!assets/*.png
+!assets/*.gif
+
+# luacov artefacts (COVERAGE=1 make test)
+luacov.stats.out
+luacov.report.out
