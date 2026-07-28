@@ -72,6 +72,18 @@ describe("Mappings", function()
       assert.is_true(core.ui.show_prev_colors)
     end)
 
+    it("keeps at most max_prev_colors entries", function()
+      local opts = require("c3po.config").options
+      local saved = opts.max_prev_colors
+      opts.max_prev_colors = 2
+      finally(function()
+        opts.max_prev_colors = saved
+      end)
+      core.prev_colors:prepend(core.color:copy())
+      core.prev_colors:prepend(core.color:copy())
+      assert.equal(2, #core.prev_colors:get_all())
+    end)
+
     it("walks the list and stops at both ends", function()
       core.prev_colors:prepend(core.color:copy())
       core.prev_colors:prepend(core.color:copy())

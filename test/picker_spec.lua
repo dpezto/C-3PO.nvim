@@ -69,6 +69,23 @@ describe("Color detection test", function()
     end)
   end)
 
+  describe("hex restricted views", function()
+    local hex_long = require("c3po.picker.hex_long")
+    local hex_short = require("c3po.picker.hex_short")
+
+    it("hex_long takes only the 6 and 8 digit forms", function()
+      test_rgb(hex_long, " #ffff00 ", { 255, 255, 0 }, nil)
+      test_rgb(hex_long, " #ffff0000 ", { 255, 255, 0 }, 0)
+      test_rgb(hex_long, " #ff0 ", nil, nil)
+    end)
+
+    it("hex_short takes only the 3 and 4 digit forms", function()
+      test_rgb(hex_short, " #ff0 ", { 255, 255, 0 }, nil)
+      test_rgb(hex_short, " #ff00 ", { 255, 255, 0 }, 0)
+      test_rgb(hex_short, " #ffff00 ", nil, nil)
+    end)
+  end)
+
   describe("The RGB functions: rgb() and rgba()", function()
     it("Modern, rgb()", function()
       test_rgb(css_rgb, " rgb(255 0 255) ", { 255, 0, 255 }, nil)
