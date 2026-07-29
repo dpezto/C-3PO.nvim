@@ -46,6 +46,20 @@ function utils.round(float, digit)
   end
 end
 
+---Format a number with at most `digit` decimals, trimming trailing zeros.
+---Enough decimals here means text formats round-trip to the same 8-bit RGB.
+---@param float number
+---@param digit integer
+---@return string
+function utils.fmt(float, digit)
+  local s = ("%." .. digit .. "f"):format(float)
+  s = s:gsub("0+$", ""):gsub("%.$", "")
+  if s == "-0" then
+    s = "0"
+  end
+  return s
+end
+
 ---@param int integer
 ---@param min integer
 ---@param max integer
