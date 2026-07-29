@@ -7,8 +7,8 @@ return {
   str = function(RGB, A)
     local R, G, B = convert.rgb_format(RGB)
     if A then
-      A = utils.round(A * 100)
-      return ("rgb(%d %d %d / %d%%)"):format(R, G, B, A)
+      A = utils.fmt(A * 100, 2)
+      return ("rgb(%d %d %d / %s%%)"):format(R, G, B, A)
     else
       return ("rgb(%d %d %d)"):format(R, G, B)
     end

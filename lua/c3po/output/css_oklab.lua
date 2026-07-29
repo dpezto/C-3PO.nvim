@@ -6,13 +6,16 @@ return {
   name = "CssOKLab",
   str = function(RGB, A)
     local L, a, b = unpack(convert.rgb2oklab(RGB))
-    L = utils.round(L * 100)
-    a = utils.round(a, 2)
-    b = utils.round(b, 2)
+    -- a and b live in roughly [-0.4, 0.4] and feed a cube plus the sRGB
+    -- gamma, so near-black channels need five decimals to round-trip.
+    L = utils.fmt(L * 100, 3)
+    a = utils.fmt(a, 5)
+    b = utils.fmt(b, 5)
     if A then
-      return ("oklab(%d%% %.2f %.2f / %d%%)"):format(L, a, b, A * 100)
+      A = utils.fmt(A * 100, 2)
+      return ("oklab(%s%% %s %s / %s%%)"):format(L, a, b, A)
     else
-      return ("oklab(%d%% %.2f %.2f)"):format(L, a, b)
+      return ("oklab(%s%% %s %s)"):format(L, a, b)
     end
   end,
 }

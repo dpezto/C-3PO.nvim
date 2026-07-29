@@ -80,19 +80,19 @@ describe("output", function()
 
   describe("css_lab", function()
     it("only RGB", function()
-      output_test(css_lab, { 128, 128, 128 }, nil, "lab(54% 0 0)")
+      output_test(css_lab, { 128, 128, 128 }, nil, "lab(53.59% 0 0)")
     end)
     it("with Alpha", function()
-      output_test(css_lab, { 128, 128, 128 }, 1, "lab(54% 0 0 / 100%)")
+      output_test(css_lab, { 128, 128, 128 }, 1, "lab(53.59% 0 0 / 100%)")
     end)
   end)
 
   describe("css_lch", function()
     it("only RGB", function()
-      output_test(css_lch, { 255, 0, 0 }, nil, "lch(53% 105 40)")
+      output_test(css_lch, { 255, 0, 0 }, nil, "lch(53.24% 104.54 40)")
     end)
     it("with Alpha", function()
-      output_test(css_lch, { 255, 0, 0 }, 1, "lch(53% 105 40 / 100%)")
+      output_test(css_lch, { 255, 0, 0 }, 1, "lch(53.24% 104.54 40 / 100%)")
     end)
   end)
 
@@ -107,19 +107,19 @@ describe("output", function()
 
   describe("css_oklab", function()
     it("only RGB", function()
-      output_test(css_oklab, { 255, 0, 0 }, nil, "oklab(63% 0.22 0.13)")
+      output_test(css_oklab, { 255, 0, 0 }, nil, "oklab(62.796% 0.22486 0.12585)")
     end)
     it("with Alpha", function()
-      output_test(css_oklab, { 255, 0, 0 }, 1, "oklab(63% 0.22 0.13 / 100%)")
+      output_test(css_oklab, { 255, 0, 0 }, 1, "oklab(62.796% 0.22486 0.12585 / 100%)")
     end)
   end)
 
   describe("css_oklch", function()
     it("only RGB", function()
-      output_test(css_oklch, { 255, 0, 0 }, nil, "oklch(63% 0.26 29)")
+      output_test(css_oklch, { 255, 0, 0 }, nil, "oklch(62.796% 0.25768 29.234)")
     end)
     it("with Alpha", function()
-      output_test(css_oklch, { 255, 0, 0 }, 1, "oklch(63% 0.26 29 / 100%)")
+      output_test(css_oklch, { 255, 0, 0 }, 1, "oklch(62.796% 0.25768 29.234 / 100%)")
     end)
   end)
 
@@ -181,6 +181,51 @@ describe("output", function()
       output_test(latex_thsb, { 0, 255, 0 }, nil, "{tHsb}{180.0, 1.000, 1.000}")
       -- Hsb hue 30.1 (orange) crosses into the second segment: tuned hue 60.2.
       output_test(latex_thsb, { 255, 128, 0 }, nil, "{tHsb}{60.2, 1.000, 1.000}")
+    end)
+  end)
+
+  describe("round trip through the text format", function()
+    local utils = require("c3po.utils")
+    local pairs_under_test = {
+      { css_rgb, require("c3po.picker.css_rgb") },
+      { css_hsl, require("c3po.picker.css_hsl") },
+      { css_hwb, require("c3po.picker.css_hwb") },
+      { css_lab, require("c3po.picker.css_lab") },
+      { css_lch, require("c3po.picker.css_lch") },
+      { css_oklab, require("c3po.picker.css_oklab") },
+      { css_oklch, require("c3po.picker.css_oklch") },
+    }
+
+    ---@param output c3po.ColorOutput
+    ---@param picker c3po.ColorPicker
+    ---@param rgb integer[] # range in (0, 255)
+    local function assert_round_trip(output, picker, rgb)
+      local RGB = vim.tbl_map(function(x)
+        return x / 255
+      end, rgb)
+      local str = output.str(RGB)
+      local _, _, parsed = picker:parse_color(str)
+      assert.is_truthy(parsed, ("%s did not parse back"):format(str))
+      local back = vim.tbl_map(function(x)
+        return utils.round(x * 255)
+      end, parsed)
+      assert.are.same(rgb, back, ("%s came back as #%02x%02x%02x"):format(str, unpack(back)))
+    end
+
+    it("every css output is exact on 8-bit colors", function()
+      for _, pair in ipairs(pairs_under_test) do
+        for r = 0, 255, 51 do
+          for g = 0, 255, 51 do
+            for b = 0, 255, 51 do
+              assert_round_trip(pair[1], pair[2], { r, g, b })
+            end
+          end
+        end
+        -- the color that exposed the integer rounding: #C0BA17 turned into #c0ba16
+        assert_round_trip(pair[1], pair[2], { 0xC0, 0xBA, 0x17 })
+        assert_round_trip(pair[1], pair[2], { 1, 2, 3 })
+        assert_round_trip(pair[1], pair[2], { 254, 253, 252 })
+      end
     end)
   end)
 end)
