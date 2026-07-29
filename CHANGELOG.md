@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.2](https://github.com/dpezto/C-3PO.nvim/compare/v1.0.1...v1.0.2) (2026-07-29)
+
+
+### Bug Fixes
+
+* **output:** emit enough decimals for css formats to round-trip ([34bf17d](https://github.com/dpezto/C-3PO.nvim/commit/34bf17d3e6a626a5644a99110c0bcc2a9d150c5d))
+* **output:** emit enough decimals for css formats to round-trip ([549bcbf](https://github.com/dpezto/C-3PO.nvim/commit/549bcbf1e1e394cc1762d039c9954d510e84455e))
+
 ## [1.0.1](https://github.com/dpezto/C-3PO.nvim/compare/v1.0.0...v1.0.1) (2026-07-28)
 
 
