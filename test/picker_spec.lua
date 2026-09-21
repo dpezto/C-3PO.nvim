@@ -493,9 +493,13 @@ describe("Color detection test", function()
     before_each(function()
       -- The name table is the seam: stubbing it keeps every case below off the
       -- filesystem and independent of the project this test happens to run in.
+      -- White is in it because a mixing expression resolves every operand
+      -- through the table, `R2D2!30` included.
       real_names = latex_name.names
       latex_name.names = function()
-        return { R2D2 = DROID }
+        -- `gray` is both a builtin name and a model name, which is what the
+        -- definition-model case below turns on.
+        return { R2D2 = DROID, white = { 1, 1, 1 }, gray = { 0.5, 0.5, 0.5 } }
       end
       saved_ft = vim.bo.filetype
       vim.bo.filetype = "tex"
@@ -551,13 +555,35 @@ describe("Color detection test", function()
       assert.equals("R2D2", span([[{\color{R2D2} x}]]))
       assert.equals("R2D2", span([[\colorbox{R2D2}{x}]]))
       assert.equals("R2D2", span([[\cellcolor{R2D2}]]))
-      -- \colorlet defines its first argument and reads its second; only the
-      -- second one has a value this picker can resolve.
+      -- \colorlet defines its first argument and reads its second. `astromech`
+      -- is not in the stubbed name table, so the scan falls through to the
+      -- expression.
       assert.equals("R2D2", span([[\colorlet{astromech}{R2D2}]]))
     end)
 
-    it("stops a mixing expression at the base name", function()
-      assert.equals("R2D2", span([[\textcolor{R2D2!50!white}{x}]]))
+    it("spans the whole mixing expression", function()
+      assert.equals("R2D2!50!white", span([[\textcolor{R2D2!50!white}{x}]]))
+      assert.equals("R2D2!30", span([[\colorbox{R2D2!30}{x}]]))
+      local _, _, rgb = latex_name:parse_color([[\textcolor{R2D2!50!white}{x}]])
+      assert.same({ 0.5, (1 + 112 / 255) / 2, (1 + 192 / 255) / 2 }, rgb)
+    end)
+
+    it("reads both sides of a \\colorlet", function()
+      local line = [[\colorlet{R2D2}{R2D2!50!white}]]
+      local start, end_ = latex_name:parse_color(line)
+      assert.equals("R2D2", line:sub(start, end_))
+      -- The scan resumes past the name it just reported, so the expression is
+      -- found without the command in front of it.
+      local next_start, next_end = latex_name:parse_color(line, end_ + 1)
+      assert.equals("R2D2!50!white", line:sub(next_start, next_end))
+    end)
+
+    it("does not read a definition's model as a color", function()
+      -- `\definecolor{x}{gray}{0.5}` resumes the scan at `}{gray}{...}`, which
+      -- is the same shape a \colorlet value has, minus the trailing group.
+      local line = [[\definecolor{R2D2}{gray}{0.5}]]
+      local _, end_ = latex_name:parse_color(line)
+      assert.is_nil(latex_name:parse_color(line, end_ + 1))
     end)
 
     it("keeps scanning the line past an unknown name", function()
@@ -586,6 +612,62 @@ describe("Color detection test", function()
       vim.api.nvim_buf_delete(bufnr, { force = true })
     end)
 
+    it("collects \\colorlet targets unevaluated", function()
+      local _, lets = latex_name.scan_lines({
+        [[\colorlet{mezcla}{R2D2!50!white}]],
+        [[\colorlet[named]{otro}{mezcla}]],
+      })
+      assert.same({ mezcla = [[R2D2!50!white]], otro = "mezcla" }, lets)
+    end)
+
+    it("resolves a \\colorlet against definitions it precedes", function()
+      latex_name.names = real_names
+      local bufnr = vim.api.nvim_create_buf(false, true)
+      vim.bo[bufnr].filetype = "tex"
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {
+        -- Deliberately before the definition it reads, and before the
+        -- \colorlet that reads it.
+        [[\colorlet{claro}{oscuro!0!white}]],
+        [[\colorlet{copia}{claro}]],
+        [[\definecolor{oscuro}{gray}{0}]],
+      })
+      assert.same({ 1, 1, 1 }, latex_name.names(bufnr).claro)
+      assert.same({ 1, 1, 1 }, latex_name.names(bufnr).copia)
+      vim.api.nvim_buf_delete(bufnr, { force = true })
+    end)
+
+    it("keeps a project \\colorlet under the buffer's own definitions", function()
+      -- Any other file in the project may \colorlet a name this buffer defines
+      -- itself, and the buffer has to win -- the file glob is a superset of the
+      -- documents that actually \input each other.
+      latex_name.names = real_names
+      local root = vim.fn.tempname()
+      vim.fn.mkdir(root, "p")
+      vim.fn.writefile({}, root .. "/.latexmkrc")
+      vim.fn.writefile({ [[\colorlet{tono}{red}]] }, root .. "/otro.tex")
+      vim.fn.writefile({ [[\definecolor{tono}{gray}{0}]] }, root .. "/main.tex")
+      vim.cmd.edit(root .. "/main.tex")
+      local bufnr = vim.api.nvim_get_current_buf()
+      vim.bo[bufnr].filetype = "tex"
+      assert.same({ 0, 0, 0 }, latex_name.names(bufnr).tono)
+      vim.cmd.bwipeout({ bang = true })
+      vim.fn.delete(root, "rf")
+    end)
+
+    it("leaves a \\colorlet cycle unresolved instead of looping", function()
+      latex_name.names = real_names
+      local bufnr = vim.api.nvim_create_buf(false, true)
+      vim.bo[bufnr].filetype = "tex"
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {
+        [[\colorlet{ida}{vuelta}]],
+        [[\colorlet{vuelta}{ida}]],
+      })
+      local names = latex_name.names(bufnr)
+      assert.is_nil(names.ida)
+      assert.is_nil(names.vuelta)
+      vim.api.nvim_buf_delete(bufnr, { force = true })
+    end)
+
     it("sees an edited definition without waiting for a write", function()
       -- The real names(), not the stub the other cases install.
       latex_name.names = real_names
@@ -602,6 +684,9 @@ describe("Color detection test", function()
       assert.equals(11, latex_name.arg_start([[\textcolor{az]], 13))
       assert.equals(7, latex_name.arg_start([[\color{]], 7))
       assert.equals(21, latex_name.arg_start([[\colorlet{astromech}{R2]], 22))
+      -- An operand of a mix completes like a first argument does.
+      assert.equals(19, latex_name.arg_start([[\textcolor{R2D2!50!wh]], 21))
+      assert.equals(29, latex_name.arg_start([[\colorlet{astromech}{R2D2!30!wh]], 30))
       assert.is_nil(latex_name.arg_start([[\cite{kn]], 8))
       assert.is_nil(latex_name.arg_start([[plain text]], 10))
     end)
@@ -639,6 +724,28 @@ describe("Color detection test", function()
       assert.is_nil(response)
     end)
 
+    it("highlights both sides of a \\colorlet through the handler", function()
+      local bufnr = vim.api.nvim_create_buf(false, true)
+      vim.bo[bufnr].filetype = "tex"
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { [[\colorlet{R2D2}{R2D2!50!white}]] })
+      local infos = require("c3po.handler.picker").info_in_range(bufnr, 0, -1, { latex_name })
+      assert.equals(2, #infos)
+      assert.same({ 0, 10, 0, 14 }, infos[1].range)
+      assert.same({ 0, 16, 0, 29 }, infos[2].range)
+      vim.api.nvim_buf_delete(bufnr, { force = true })
+    end)
+
+    it("leaves a color command's text argument alone", function()
+      local bufnr = vim.api.nvim_create_buf(false, true)
+      vim.bo[bufnr].filetype = "tex"
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { [[\textcolor{R2D2}{gray} \colorbox{R2D2}{white}]] })
+      local infos = require("c3po.handler.picker").info_in_range(bufnr, 0, -1, { latex_name })
+      assert.equals(2, #infos)
+      assert.same({ 0, 11, 0, 15 }, infos[1].range)
+      assert.same({ 0, 33, 0, 37 }, infos[2].range)
+      vim.api.nvim_buf_delete(bufnr, { force = true })
+    end)
+
     it("never feeds :C3 pick, so the name is not overwritten", function()
       local config = require("c3po.config")
       local saved = config.options.pickers
@@ -648,6 +755,77 @@ describe("Color detection test", function()
       assert.is_nil(require("c3po.handler.picker").pick())
       config.options.pickers = saved
       vim.api.nvim_buf_set_lines(0, 0, -1, false, {})
+    end)
+  end)
+
+  describe("xcolor color expressions", function()
+    local expr = require("c3po.picker.latex_expr")
+    local NAMES = {
+      red = { 1, 0, 0 },
+      green = { 0, 1, 0 },
+      blue = { 0, 0, 1 },
+      white = { 1, 1, 1 },
+    }
+
+    ---@param s string
+    ---@return RGB?
+    local function ev(s)
+      return expr.evaluate(s, NAMES)
+    end
+
+    it("resolves a bare name", function()
+      assert.same({ 1, 0, 0 }, ev("red"))
+      assert.is_nil(ev("R2D2"))
+    end)
+
+    it("mixes two colors by percentage", function()
+      assert.same({ 0.5, 0, 0.5 }, ev("red!50!blue"))
+      assert.same({ 0.25, 0, 0.75 }, ev("red!25!blue"))
+    end)
+
+    it("chains mixes from left to right", function()
+      -- (red!50!blue) is {.5, 0, .5}, then !50!green
+      assert.same({ 0.25, 0.5, 0.25 }, ev("red!50!blue!50!green"))
+    end)
+
+    it("mixes with white when the expression ends in a percentage", function()
+      assert.same(ev("red!30!white"), ev("red!30"))
+      -- An empty percentage is 100, so the partner never enters the mix.
+      assert.same({ 1, 0, 0 }, ev("red!"))
+    end)
+
+    it("complements after evaluating the whole chain", function()
+      assert.same({ 0, 1, 1 }, ev("-red"))
+      assert.same({ 1, 0, 0 }, ev("--red"))
+      assert.same({ 0.5, 1, 0.5 }, ev("-red!50!blue"))
+    end)
+
+    it("sums an extended expression, weighted", function()
+      assert.same({ 0.5, 0, 0.5 }, ev("rgb:red,1;blue,1"))
+      assert.same({ 0.25, 0, 0.75 }, ev("cmyk:red,1;blue,3"))
+      -- An explicit divisor replaces the sum of the weights, so this one does
+      -- not add up to a full color.
+      assert.same({ 0.25, 0, 0.25 }, ev("rgb,4:red,1;blue,1"))
+      -- A trailing semicolon ends the list, as xcolor's own parser does.
+      assert.same({ 0.5, 0, 0.5 }, ev("rgb:red,1;blue,1;"))
+    end)
+
+    it("clamps a weighted sum back into the cube", function()
+      assert.same({ 1, 0, 0 }, ev("rgb,1:red,2"))
+    end)
+
+    it("rejects what it cannot evaluate", function()
+      assert.is_nil(ev("red!50!R2D2"))
+      assert.is_nil(ev("red!150!blue"))
+      assert.is_nil(ev("red!-10!blue"))
+      assert.is_nil(ev("red!x!blue"))
+      assert.is_nil(ev("rgb:red,x"))
+      assert.is_nil(ev("rgb,0:red,1"))
+      assert.is_nil(ev("rgb:"))
+      -- Not a core model, so not an extended expression either.
+      assert.is_nil(ev("https://example.com,1"))
+      -- The color-series postfix needs \definecolorseries state.
+      assert.is_nil(ev("red!!+"))
     end)
   end)
 end)

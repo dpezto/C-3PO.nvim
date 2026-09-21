@@ -45,6 +45,8 @@ The full reference lives in [`doc/c3po.txt`](./doc/c3po.txt) (`:h c3po`).
 - Project-wide xcolor named colors: `\textcolor{R2D2}` carries the color its
   `\definecolor` gives it, wherever in the project that definition lives, and
   the names complete through blink.cmp or `'omnifunc'`.
+- xcolor color expressions, evaluated: `\colorlet{mix}{myred!50!myblue}` paints
+  both sides in the mixed color, and defines `mix` for the rest of the project.
 - Buffer highlighting of every configured format, with `bg`, `fg` or virtual
   text styles.
 - Yank a color in any format without touching the buffer.
@@ -304,7 +306,9 @@ The `"latex"` picker alone reads and highlights every xcolor model: `{RGB}`,
 `{rgb}`, `{HTML}`, `{cmyk}`, `{cmy}`, `{hsb}`, `{Hsb}`, `{HSB}`, `{tHsb}`,
 `{gray}`, `{Gray}`, `{wave}`. Outputs are per model, so only the ones a
 document uses need enabling. `"latex_name"` resolves colors used by name
-against every `\definecolor` and `\providecolor` in the project.
+against every `\definecolor`, `\providecolor` and `\colorlet` in the project,
+color expressions included: `\colorlet{mix}{myred!50!myblue}` paints `mix` and
+`myred!50!myblue` alike, `\textcolor{myred!30}` paints the tint.
 
 ```lua
 require("c3po").setup({
@@ -329,12 +333,15 @@ Notes and limitations:
   overwriting `R2D2` with `#0070c0` would throw away the indirection the
   document is built on. Edit the definition itself, and use `:C3 yank` to
   read a named color.
+- Expressions are mixed on the RGB values, while xcolor mixes in the color's
+  own model, so a mix or a complement of a `{cmyk}` or `{hsb}` color lands a
+  few units per channel off.
 - The project scan finds the root through `.latexmkrc`, `latexmkrc`,
   `Tectonic.toml`, `.texlabroot`, `texlabroot` or `.git`, reads at most 200
   `*.tex`/`*.sty` files, and does not follow `\input`/`\include`. The `named`
-  model, `\definecolorset`, `\definecolorseries` and definitions split across
-  lines are not resolved. See `:h c3po-option-pickers-latex_name` for the
-  full list.
+  model, the `A!!+` series postfix, `\definecolorset`, `\definecolorseries`
+  and definitions split across lines are not resolved. See
+  `:h c3po-option-pickers-latex_name` for the full list.
 
 ### Recognition and picker order
 

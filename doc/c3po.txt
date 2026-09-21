@@ -401,7 +401,32 @@ Default: {
 	root; and the unsaved definitions in the current buffer. The root is
 	found with .latexmkrc, latexmkrc, Tectonic.toml, .texlabroot,
 	texlabroot or .git, falling back to the file's own directory. At most
-	200 files are scanned.
+	200 files are scanned. A \colorlet is resolved once its own layer is
+	complete, so it may read a color defined later in the file, or in
+	another one, and it outranks the \definecolor's of that same layer --
+	but never those of the layer above: a \colorlet somewhere in the
+	project does not decide what a name means in a buffer that defines it
+	itself.
+
+	Wherever a color name is accepted, so is a color expression, and the
+	whole expression carries the resulting color: >latex
+		\colorlet{mix}{myred!50!myblue}
+		\textcolor{myred!30}{a tint of myred}
+<
+	Supported forms, following xcolor's own parser:
+		- `A!p!B`: `p`% of A and `(100-p)`% of B
+		- chained left to right, so `A!p!B!q!C` is `(A!p!B)!q!C`
+		- `A!p` is `A!p!white`, and an empty percentage means 100
+		- `-A` is A's complement, applied to the result of the whole
+		  chain; an even number of `-` cancels out
+		- `<model>[,<div>]:<expr>,<w>;<expr>,<w>;...`, a weighted sum
+		  over the rgb, cmy, cmyk, hsb or gray core models, divided
+		  by `<div>` or by the sum of the weights
+
+	Every mix is computed on the RGB values, whereas xcolor computes it
+	in the color's own model, so mixing or complementing a color defined
+	as {cmyk} or {hsb} lands a few units per channel off, and an extended
+	expression's core model is checked but not used as the mixing space.
 
 	Editing a definition repaints its uses immediately, everywhere in the
 	buffer, without waiting for a write or for insert mode to end. Other
@@ -413,17 +438,17 @@ Default: {
 		  supports
 		- \definecolor[type]{name}{model}{values}
 		- \providecolor, and several definitions on one line
+		- \colorlet{new}{expression}, which both defines `new` and
+		  highlights the two of them
 	Recognised uses:
 		- \color, \textcolor, \colorbox, \pagecolor, \fcolorbox,
 		  \rowcolor, \cellcolor, \columncolor
-		- \colorlet{new}{old}, where `old` is the resolvable one
-		- a mixing expression highlights its base name only, so
-		  `R2D2!50!white` spans `R2D2`
+		- a color expression anywhere one of those takes a name
 	Not supported:
 		- the `named` model (\definecolor{n}{named}{Blue}), which
 		  needs the dvipsnames/svgnames sets and their package options
-		- \colorlet as a definition source: it highlights both names
-		  when they are already known, but does not define one
+		- the `A!!+`, `A!!-` and `A!![n]` series postfix, which needs
+		  the \definecolorseries state
 		- \definecolorset, \definecolorseries, \preparecolor
 		- definitions split across lines
 		- \input/\include following; the scan is a plain file glob
