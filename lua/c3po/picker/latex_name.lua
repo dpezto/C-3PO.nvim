@@ -1,3 +1,4 @@
+local expr = require("c3po.picker.latex_expr")
 local hl = require("c3po.handler.highlight")
 local latex = require("c3po.picker.latex")
 local utils = require("c3po.utils")
@@ -17,8 +18,12 @@ LatexNamePicker.readonly = true
 local TEX_FT = { tex = true, latex = true, plaintex = true }
 
 -- A color name is what xcolor lets you write between the braces. `!` is excluded
--- on purpose: it opens a mixing expression (`R2D2!50!white`).
+-- on purpose: it opens a color expression, and a definition names one color.
 local NAME = [=[[0-9A-Za-z@_-]+]=]
+-- Every character a color expression can be built from. Deliberately a
+-- superset: latex_expr is the grammar, and an argument it cannot evaluate is
+-- simply not highlighted.
+local EXPR = [=[[-0-9A-Za-z@_.,:;!]+]=]
 -- \definecolor's optional [type] argument, and \color's optional [model] one.
 local OPT = [=[%(\[[^]]*\])?]=]
 
@@ -27,18 +32,45 @@ local OPT = [=[%(\[[^]]*\])?]=]
 -- also what keeps the definition's `{RGB}{...}` visible to the latex picker: the
 -- handler resumes at the end of the name, not at the end of the command.
 local DEFINITION = [=[\C\v\\%(define|provide)color]=] .. OPT .. [=[\{\zs]=] .. NAME .. [=[\ze\}]=]
+-- Where a color argument ends. `$` is there so the swatch survives the moment
+-- between typing the expression and typing its closing brace.
+local ARG_END = [=[\ze%(\}|$)]=]
+-- \colorlet as a definition, for scan_lines. `[^{]*` is the optional [type]
+-- argument; the value is left to latex_expr, which is the only thing that knows
+-- whether it resolves.
+local COLORLET = "\\colorlet[^{]*{([0-9A-Za-z@_-]+)}{([^}]+)}"
+-- A color argument opened and typed into, for arg_start(). Whatever stands
+-- between the brace and the name being completed is the expression so far, so
+-- an operand of a mix completes like a first argument does.
+local COMMAND_ARG = "\\%a*color%a*{[-0-9A-Za-z@_.,:;!]*$"
+local COLORLET_ARG = "\\colorlet{[0-9A-Za-z@_-]+}{[-0-9A-Za-z@_.,:;!]*$"
+-- What may stand right before a match: a color command's opening brace, or
+-- \colorlet's second one. The `}{` pattern below cannot see the command it
+-- follows, so without this `\textcolor{red}{blue}` would paint the word blue.
+local ARG_PREFIX = {
+  "\\%a*color%a*%[?[^%]{]*%]?{$",
+  "\\colorlet%[?[^%]{]*%]?{[0-9A-Za-z@_-]+}{$",
+}
 
 ---@return string[]
 local function build_patterns()
   return {
     DEFINITION,
-    -- Every command that takes a color name as its first braced argument. No
-    -- optional-argument group here: `\color[RGB]{0,112,192}` is a specification,
-    -- not a name, and belongs to the latex picker.
-    [=[\C\v\\%(text|page|f|cell|row|column)?color%(box)?\*?\{\zs]=] .. NAME .. [=[\ze[}!]]=],
-    -- \colorlet{new}{old}: `old` is the one we can resolve. `new` is deliberately
-    -- left alone -- see the ponytail note on mixing expressions below.
-    [=[\C\v\\colorlet]=] .. OPT .. [=[\{]=] .. NAME .. [=[\}\{\zs]=] .. NAME .. [=[\ze[}!]]=],
+    -- Every command that takes a color expression as its first braced argument.
+    -- No optional-argument group here: `\color[RGB]{0,112,192}` is a
+    -- specification, not a name, and belongs to the latex picker.
+    [=[\C\v\\%(text|page|f|cell|row|column)?color%(box)?\*?\{\zs]=] .. EXPR .. ARG_END,
+    -- \colorlet{new}{old}: `new` is the name it defines, resolvable once `old`
+    -- is.
+    [=[\C\v\\colorlet]=] .. OPT .. [=[\{\zs]=] .. NAME .. [=[\ze\}]=],
+    -- `old`, the expression `new` is defined as. It cannot be found from
+    -- \colorlet: the caller resumes the scan just past `new`, so by the time
+    -- this is looked for, the command name is behind the search start. What is
+    -- left to key on is the second group following the first one immediately,
+    -- with nothing after it -- which is what rules out \definecolor{x}{gray},
+    -- where the group is a model name and another group follows. ARG_PREFIX
+    -- rules out the rest.
+    [=[\C\v^\}\{\zs]=] .. EXPR .. [=[\ze%(\}\{@!|$)]=],
   }
 end
 
@@ -67,13 +99,19 @@ local BUILTIN = {
   yellow = { 1, 1, 0 },
 }
 
----Collect every `\definecolor` / `\providecolor` these lines resolve.
----Pure: no filesystem, no buffer, so it is the seam the tests drive.
+---Collect every `\definecolor` / `\providecolor` these lines resolve, and every
+---`\colorlet` they declare. Pure: no filesystem, no buffer, so it is the seam
+---the tests drive.
 ---@param lines string[]
----@return table<string, RGB>
+---@return table<string, RGB> #Definitions, resolved
+---@return table<string, string> #\colorlet targets, still unevaluated: the
+---expression may name a color defined later, or in another file
 function LatexNamePicker.scan_lines(lines)
-  local names = {}
+  local names, lets = {}, {}
   for _, line in ipairs(lines) do
+    for name, value in line:gmatch(COLORLET) do
+      lets[name] = value
+    end
     local init = 1
     while init <= #line do
       local start_col, end_col = pattern.find(line, DEFINITION, init)
@@ -94,10 +132,36 @@ function LatexNamePicker.scan_lines(lines)
       init = end_col + 1
     end
   end
-  return names
+  return names, lets
 end
 
----@type table<string, table<string, RGB>> #Keyed by project root
+---Resolve `\colorlet` targets against the names already known, repeating while
+---anything new comes out: a \colorlet may precede the definition it reads, and
+---may read another \colorlet.
+---Called once per layer rather than once at the end, so that a \colorlet only
+---outranks the definitions of its own layer. Some other file in the project
+---writing `\colorlet{myred}{red!70!black}` must not decide what `myred` is in a
+---buffer that defines it itself.
+---ponytail: quadratic in the number of \colorlet's, which is a handful per
+---document. A cycle simply stays unresolved.
+---@param names table<string, RGB> #Modified in place
+---@param lets table<string, string>
+local function resolve(names, lets)
+  local pending = vim.tbl_extend("force", {}, lets)
+  local progress = true
+  while progress do
+    progress = false
+    for name, value in pairs(pending) do
+      local rgb = expr.evaluate(value, names)
+      if rgb then
+        names[name], pending[name] = rgb, nil
+        progress = true
+      end
+    end
+  end
+end
+
+---@type table<string, table<string, RGB>> #Keyed by project root, \colorlet resolved
 local project = {}
 ---@type table<integer, table<string, RGB>> #Keyed by bufnr, only while modified
 local live = {}
@@ -122,10 +186,11 @@ end
 
 ---@param root string
 ---@return table<string, RGB>
+---@return table<string, string>
 local function scan_project(root)
-  local names = {}
+  local names, lets = {}, {}
   if root == "" then
-    return names
+    return names, lets
   end
   -- ponytail: every *.tex/*.sty under the project root, capped at 200 files.
   -- Following \input/\include properly needs TEXINPUTS, extension inference,
@@ -138,10 +203,12 @@ local function scan_project(root)
   for _, path in ipairs(files) do
     local ok, lines = pcall(vim.fn.readfile, path)
     if ok then
-      names = vim.tbl_extend("force", names, LatexNamePicker.scan_lines(lines))
+      local found, let = LatexNamePicker.scan_lines(lines)
+      names = vim.tbl_extend("force", names, found)
+      lets = vim.tbl_extend("force", lets, let)
     end
   end
-  return names
+  return names, lets
 end
 
 ---Every color name visible from this buffer: builtins, then the project's
@@ -157,7 +224,9 @@ function LatexNamePicker.names(bufnr)
 
   local base = project[root]
   if base == nil then
-    base = vim.tbl_extend("force", BUILTIN, scan_project(root))
+    local names, lets = scan_project(root)
+    base = vim.tbl_extend("force", BUILTIN, names)
+    resolve(base, lets)
     project[root] = base
   end
 
@@ -172,7 +241,11 @@ function LatexNamePicker.names(bufnr)
   local tick = vim.api.nvim_buf_get_changedtick(bufnr)
   if live_tick[bufnr] ~= tick then
     local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-    local merged = vim.tbl_extend("force", base, LatexNamePicker.scan_lines(lines))
+    local names, lets = LatexNamePicker.scan_lines(lines)
+    local merged = vim.tbl_extend("force", base, names)
+    -- The buffer's \colorlet's last: they read this buffer's definitions, so
+    -- they can only be evaluated once every one of them is in.
+    resolve(merged, lets)
     -- A definition changed, so every use of that name is the wrong color now --
     -- including the ones this repaint will not reach, since on_lines only covers
     -- the edited range. Scheduled because we are inside that very repaint.
@@ -229,7 +302,9 @@ function LatexNamePicker:parse_color(s, init, bufnr)
     if start_col == nil or end_col == nil then
       return
     end
-    local rgb = names[s:sub(start_col, end_col)]
+    local before = s:sub(1, start_col - 1)
+    local rgb = (before:match(ARG_PREFIX[1]) or before:match(ARG_PREFIX[2]))
+      and expr.evaluate(s:sub(start_col, end_col), names)
     if rgb then
       return start_col, end_col, rgb
     end
@@ -279,7 +354,7 @@ function LatexNamePicker.arg_start(line, col)
     return
   end
   local prefix = before:sub(1, start - 1)
-  if prefix:match("\\%a*color%a*{$") or prefix:match("\\colorlet{[0-9A-Za-z@_-]+}{$") then
+  if prefix:match(COMMAND_ARG) or prefix:match(COLORLET_ARG) then
     return start - 1
   end
 end
