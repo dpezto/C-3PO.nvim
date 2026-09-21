@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0](https://github.com/dpezto/C-3PO.nvim/compare/v1.0.2...v1.1.0) (2026-09-21)
+
+
+### Features
+
+* **latex_name:** evaluate xcolor color expressions ([2c46e9b](https://github.com/dpezto/C-3PO.nvim/commit/2c46e9b3421a94008095ae1f6dcc176adf280ee5))
+* **latex_name:** evaluate xcolor color expressions ([ca8b753](https://github.com/dpezto/C-3PO.nvim/commit/ca8b7537bb99b0ab571ad88931393c2815f8f106))
+
 ## [1.0.2](https://github.com/dpezto/C-3PO.nvim/compare/v1.0.1...v1.0.2) (2026-07-29)
 
 
