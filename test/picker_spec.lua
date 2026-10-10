@@ -379,6 +379,33 @@ describe("Color detection test", function()
       _, _, _, alpha = css_rgb:parse_color(" rgba(0, 0, 0, -1) ")
       assert.equals(0, alpha)
     end)
+
+    it("finds a match that only begins where the scan resumes", function()
+      -- From the start, `#000000` follows a keyword char and is no color. From
+      -- column 5, `^` holds right before it; a remembered miss must not hide it.
+      local s = "#fff#000000"
+      local start, end_ = hex:parse_color(s)
+      assert.equals(4, end_)
+      start, end_ = hex:parse_color(s, 5)
+      assert.equals(5, start)
+      assert.equals(11, end_)
+    end)
+
+    it("scans a long line in linear time", function()
+      local colors = {}
+      for i = 1, 2000 do
+        colors[i] = ("#%06x"):format(i)
+      end
+      local bufnr = vim.api.nvim_create_buf(false, true)
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { table.concat(colors, " ") })
+      local start = vim.uv.hrtime()
+      local infos = require("c3po.handler.picker").info_in_range(bufnr, 0, -1, { hex, css_rgb, css_hsl, css_lab })
+      local elapsed = (vim.uv.hrtime() - start) / 1e6
+      vim.api.nvim_buf_delete(bufnr, { force = true })
+      assert.equals(2000, #infos)
+      -- Quadratic took seconds here; linear takes tens of milliseconds.
+      assert.is_true(elapsed < 1000, ("took %d ms"):format(elapsed))
+    end)
   end)
   describe("LaTeX (xcolor)", function()
     it("RGB and rgb models", function()
