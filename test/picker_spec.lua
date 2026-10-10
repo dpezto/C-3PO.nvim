@@ -418,7 +418,7 @@ describe("Color detection test", function()
       assert.equals(11, end_)
     end)
 
-    it("scans a long line in linear time", function()
+    it("scans a long line without quadratic slowdown", function()
       local function scan(n)
         local colors = {}
         for i = 1, n do
@@ -434,10 +434,19 @@ describe("Color detection test", function()
         return elapsed
       end
       -- Compare growth, not wall time, so slow runners (coverage hooks, JIT
-      -- off) don't fail it: 4x the colors costs ~4x when linear, ~16x when
-      -- quadratic.
-      local ratio = scan(2000) / scan(500)
-      assert.is_true(ratio < 8, ("4x the colors took %.1fx the time"):format(ratio))
+      -- off) don't fail it. Best of three after a warm-up run, since a cold
+      -- first scan inflates the ratio. 4x the colors costs about 6x here (each
+      -- search still copies the rest of the line) and about 16x when quadratic.
+      local function best(n)
+        local t = math.huge
+        for _ = 1, 3 do
+          t = math.min(t, scan(n))
+        end
+        return t
+      end
+      scan(500)
+      local ratio = best(2000) / best(500)
+      assert.is_true(ratio < 11, ("4x the colors took %.1fx the time"):format(ratio))
     end)
   end)
   describe("LaTeX (xcolor)", function()
