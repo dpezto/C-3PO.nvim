@@ -84,7 +84,8 @@ M.register("yank", {
       _, _, rgb, alpha = require("c3po.handler.lsp").pick()
     end
     if rgb == nil then
-      _, _, rgb, alpha = require("c3po.handler.picker").pick()
+      -- Yanking leaves the buffer alone, so a named color is fair game.
+      _, _, rgb, alpha = require("c3po.handler.picker").pick(true)
     end
     if rgb == nil then
       vim.notify("[c3po] yank: no color under the cursor", vim.log.levels.WARN)

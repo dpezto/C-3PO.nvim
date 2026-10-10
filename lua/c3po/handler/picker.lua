@@ -5,13 +5,14 @@ local hl = require("c3po.handler.highlight")
 ---@class c3po.PickerHandler
 local PickerHandler = {}
 
+---@param readonly? boolean Also match readonly pickers, for reading a color without replacing it.
 ---@return integer? start_col 1-index
 ---@return integer? end_col 1-index, included
 ---@return RGB? RGB
 ---@return Alpha? Alpha
 ---@return c3po.ColorInput? recognized_input
 ---@return c3po.ColorOutput? recognized_output
-function PickerHandler.pick()
+function PickerHandler.pick(readonly)
   local opts = require("c3po.config").options
   local line = vim.api.nvim_get_current_line()
   --- cursor_col is 0-indexed, but start_col and end_col is 1-indexed.
@@ -26,7 +27,7 @@ function PickerHandler.pick()
       -- out (xcolor's `\textcolor{R2D2}`). Picking would overwrite the name
       -- with a literal, so they only ever feed the highlighter.
       local s, e, rgb, a
-      if not picker.readonly then
+      if readonly or not picker.readonly then
         s, e, rgb, a = picker:parse_color(line, init)
       end
       if s and e and rgb and (start_col == nil or s < start_col) then

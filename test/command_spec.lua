@@ -152,6 +152,22 @@ describe("Commands", function()
       vim.cmd("C3 yank css_rgb")
       assert.equal("rgb(255 0 0)", vim.fn.getreg('"'))
     end)
+
+    it("Yanks a named color, which :C3 pick leaves alone", function()
+      local opts = require("c3po.config").options
+      local saved = opts.pickers
+      opts.pickers = { require("c3po.picker.latex_name") }
+      vim.bo.filetype = "tex"
+      finally(function()
+        vim.bo.filetype = ""
+        opts.pickers = saved
+      end)
+      utils.set_lines(0, -1, { [[\definecolor{R2D2}{RGB}{0, 112, 192}]], [[\textcolor{R2D2}{x}]] })
+      vim.api.nvim_win_set_cursor(0, { 2, 13 })
+      vim.fn.setreg('"', "")
+      vim.cmd("C3 yank")
+      assert.equal("#0070c0", vim.fn.getreg('"'))
+    end)
   end)
 
   describe("C3 pick (edit)", function()
