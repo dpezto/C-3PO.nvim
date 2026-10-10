@@ -10,8 +10,9 @@ return require("c3po.picker")({
   },
   to_rgb = function(c1, c2, c3, c4)
     local L, a, b = parse.percent(c1, 100), parse.percent(c2, 125), parse.percent(c3, 125)
-    if utils.valid_range(L, 0, 100) and utils.valid_range({ a, b }, -125, 125) then
-      return convert.lab2rgb({ L, a, b }), parse.alpha(c4)
+    -- L is clamped; a and b are unbounded, 125 is only what 100% stands for.
+    if L and a and b then
+      return convert.lab2rgb({ utils.clamp(L, 0, 100), a, b }), parse.alpha(c4)
     end
   end,
 })
