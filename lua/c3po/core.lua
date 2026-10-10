@@ -108,6 +108,7 @@ function Core:insert()
   local _, col = api.get_cursor()
   self:anchor(col, col)
   self.ui:open(self.color, self.prev_colors)
+  self:set_color()
   -- Return to normal mode
   vim.cmd("stopinsert")
   -- Key mappings
@@ -125,6 +126,7 @@ function Core:on_quit()
   if vim.api.nvim_buf_is_valid(self.bufnr) then
     vim.api.nvim_buf_clear_namespace(self.bufnr, ns_id, 0, -1)
   end
+  self:set_color("")
 end
 
 function Core:complete()
@@ -137,6 +139,7 @@ function Core:complete()
     end
     self.color:set_rgb(color:get_rgb())
     self.ui:toggle_prev_colors(false)
+    self:set_color()
     return
   end
   self.prev_colors:prepend(self.color:copy())

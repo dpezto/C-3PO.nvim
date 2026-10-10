@@ -324,6 +324,17 @@ describe("Commands", function()
         assert.equal("#00ff00", utils.get_line())
       end)
 
+      it("publishes the restored color, and clears it on quit", function()
+        vim.cmd("C3 pick")
+        feed("L<CR>")
+        clear_buffer()
+        vim.cmd("C3 pick")
+        feed("g<CR>")
+        assert.equal("#ff0000", vim.g.c3po_color)
+        feed("q")
+        assert.equal("", vim.g.c3po_color)
+      end)
+
       describe("with auto_close off", function()
         local opts = require("c3po.config").options
 
@@ -486,6 +497,13 @@ describe("Commands", function()
       utils.set_lines(0, -1, { "foo" })
       feed("A<Plug>(c3po-insert)MjMjM<CR>")
       assert.equal("foo#808080", utils.get_line())
+    end)
+
+    it("publishes the color", function()
+      vim.g.c3po_color = ""
+      feed("i<Plug>(c3po-insert)")
+      assert.equal("#000000", vim.g.c3po_color)
+      feed("q")
     end)
   end)
 
