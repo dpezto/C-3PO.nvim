@@ -519,7 +519,7 @@ Default: {
 	c3po.setup({
 	  pickers = {
 	    c3po.picker.ansi_escape({
-	      foreground = "#c3poc3po",
+	      foreground = "#cccccc",
 	      background = "#0c0c0c",
 	      black = "#0c0c0c",
 	      red = "#c50f1f",
@@ -528,7 +528,7 @@ Default: {
 	      blue = "#0037da",
 	      magenta = "#881798",
 	      cyan = "#3a96dd",
-	      white = "#c3poc3po",
+	      white = "#cccccc",
 	      bright_black = "#767676",
 	      bright_red = "#e74856",
 	      bright_green = "#16c60c",

@@ -342,6 +342,9 @@ describe("Color detection test", function()
         { fg = "#ff0000", bg = "#0000ff" }
       )
     end)
+    it("defaults to valid colors", function()
+      test_hl_def(ansi_escape(), " \\u001b[37m ", { fg = "#cccccc", bg = "#0c0c0c" })
+    end)
   end)
   -- Every other case in this file pads the color with a leading and trailing
   -- space, which hid the boundary and ordering bugs below.
