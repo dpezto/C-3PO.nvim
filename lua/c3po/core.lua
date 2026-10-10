@@ -85,6 +85,8 @@ function Core:pick()
   if start_col and end_col and rgb then
     self:anchor(start_col - 1, end_col)
     self.color:set_rgb(rgb)
+    -- The alpha of the previous pick must not carry over to a color without one.
+    self.color.alpha:reset()
   else
     self:anchor(col, col)
     self.color:reset()

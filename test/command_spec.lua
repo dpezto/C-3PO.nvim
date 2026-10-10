@@ -284,6 +284,16 @@ describe("Commands", function()
         feed("q")
       end)
 
+      it("does not carry the alpha of the previous pick over", function()
+        utils.set_lines(0, -1, { "#ff000080" })
+        vim.cmd("C3 pick")
+        feed("q")
+        utils.set_lines(0, -1, { "#00ff00" })
+        vim.cmd("C3 pick")
+        feed("<CR>")
+        assert.equal("#00ff00", utils.get_line())
+      end)
+
       describe("with auto_close off", function()
         local opts = require("c3po.config").options
 
