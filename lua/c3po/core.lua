@@ -130,7 +130,8 @@ end
 function Core:complete()
   local point = self.ui:point_at()
   if point.type == "prev" then
-    local color = self.prev_colors:get()
+    -- The entry under the cursor: a click moves the cursor, not the index.
+    local color = self.prev_colors:get_all()[point.index]
     if color == nil then
       return
     end
