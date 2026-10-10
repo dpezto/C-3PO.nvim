@@ -80,6 +80,63 @@ describe("Commands", function()
     end)
   end)
 
+  describe("C3 pick (LSP)", function()
+    ---An in-process language server that reports one color.
+    ---@param info lsp.ColorInformation
+    local function fake_server(info)
+      return function(dispatchers)
+        local closing = false
+        return {
+          request = function(method, _, callback)
+            if method == "initialize" then
+              callback(nil, { capabilities = { colorProvider = true } })
+            elseif method == "textDocument/documentColor" then
+              callback(nil, { info })
+            else
+              callback(nil, nil)
+            end
+            return true, 1
+          end,
+          notify = function(method)
+            if method == "exit" then
+              dispatchers.on_exit(0, 15)
+            end
+            return true
+          end,
+          is_closing = function()
+            return closing
+          end,
+          terminate = function()
+            closing = true
+            dispatchers.on_exit(0, 15)
+          end,
+        }
+      end
+    end
+
+    it("converts the server's UTF-16 offsets to bytes", function()
+      utils.set_lines(0, -1, { "é #ff0000;" })
+      local id = vim.lsp.start({
+        name = "c3po-fake",
+        cmd = fake_server({
+          -- `é` is one UTF-16 unit but two bytes.
+          range = { start = { line = 0, character = 2 }, ["end"] = { line = 0, character = 9 } },
+          color = { red = 0, green = 0, blue = 1, alpha = 1 },
+        }),
+      })
+      finally(function()
+        vim.lsp.get_client_by_id(id):stop(true)
+        vim.wait(1000, function()
+          return vim.lsp.get_client_by_id(id) == nil
+        end)
+      end)
+      vim.api.nvim_win_set_cursor(0, { 1, 5 })
+      vim.cmd("C3 pick")
+      feed("<CR>")
+      assert.equal("é #0000ffff;", utils.get_line())
+    end)
+  end)
+
   describe("C3 yank", function()
     it("Yanks in the first output format by default", function()
       utils.set_lines(0, -1, { "#ff0000" })
