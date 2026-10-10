@@ -4,7 +4,9 @@ local convert = require("c3po.utils.convert")
 ---@class XyzInput: c3po.ColorInput
 local XyzInput = setmetatable({
   name = "XYZ",
-  max = { 1, 1, 1 },
+  -- sRGB white, which is as far as the gamut reaches on every axis. Its Z is
+  -- above 1, so a cap of 1 would tint white yellow.
+  max = convert.rgb2xyz({ 1, 1, 1 }),
   min = { 0, 0, 0 },
   delta = { 0.005, 0.005, 0.005 },
   bar_name = { "X", "Y", "Z" },

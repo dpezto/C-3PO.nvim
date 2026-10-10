@@ -243,5 +243,12 @@ describe("input", function()
     it("to_rgb", function()
       to_rgb_test(xyz, { 0.4124, 0.2126, 0.0193 }, { 255, 0, 0 })
     end)
+    it("keeps white", function()
+      local input = xyz:new()
+      input:set_rgb({ 1, 1, 1 })
+      for _, x in ipairs(input:get_rgb()) do
+        assert.is_true(utils.near(1, x, 1 / 255 / 2))
+      end
+    end)
   end)
 end)
