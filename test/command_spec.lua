@@ -219,6 +219,44 @@ describe("Commands", function()
         assert.equal("#ffffff", utils.get_line())
       end)
 
+      describe("with auto_close off", function()
+        local opts = require("c3po.config").options
+
+        before_each(function()
+          opts.auto_close = false
+        end)
+
+        after_each(function()
+          opts.auto_close = true
+        end)
+
+        it("writes to the buffer it was picked from", function()
+          local source = vim.api.nvim_get_current_buf()
+          local other = vim.api.nvim_create_buf(true, false)
+          vim.api.nvim_buf_set_lines(other, 0, -1, false, { "other" })
+          utils.set_lines(0, -1, { "#ffffff" })
+          local win = vim.api.nvim_get_current_win()
+          vim.cmd("C3 pick")
+          vim.api.nvim_win_set_buf(win, other)
+          feed("0<CR>")
+          assert.same({ "other" }, vim.api.nvim_buf_get_lines(other, 0, -1, false))
+          assert.same({ "#00ffff" }, vim.api.nvim_buf_get_lines(source, 0, -1, false))
+          vim.api.nvim_win_set_buf(win, source)
+          vim.api.nvim_buf_delete(other, { force = true })
+        end)
+
+        it("follows the color when the buffer is edited meanwhile", function()
+          local source = vim.api.nvim_get_current_buf()
+          utils.set_lines(0, -1, { "x #ffffff" })
+          vim.api.nvim_win_set_cursor(0, { 1, 2 })
+          vim.cmd("C3 pick")
+          vim.api.nvim_buf_set_lines(source, 0, 0, false, { "above" })
+          vim.api.nvim_buf_set_text(source, 1, 0, 1, 0, { "yy" })
+          feed("0<CR>")
+          assert.same({ "above", "yyx #00ffff" }, vim.api.nvim_buf_get_lines(source, 0, -1, false))
+        end)
+      end)
+
       describe("increase", function()
         -- Default mapping: l / d / , (1 / 5 / 10)
 
