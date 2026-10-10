@@ -99,6 +99,23 @@ local BUILTIN = {
   yellow = { 1, 1, 0 },
 }
 
+---The part of a line TeX reads: everything before the first unescaped `%`.
+---@param line string
+---@return string
+local function strip_comment(line)
+  local i = 1
+  while true do
+    i = line:find("[\\%%]", i)
+    if i == nil then
+      return line
+    elseif line:sub(i, i) == "%" then
+      return line:sub(1, i - 1)
+    end
+    -- A backslash escapes the next character, `\%` and `\\` alike.
+    i = i + 2
+  end
+end
+
 ---Collect every `\definecolor` / `\providecolor` these lines resolve, and every
 ---`\colorlet` they declare. Pure: no filesystem, no buffer, so it is the seam
 ---the tests drive.
@@ -109,6 +126,7 @@ local BUILTIN = {
 function LatexNamePicker.scan_lines(lines)
   local names, lets = {}, {}
   for _, line in ipairs(lines) do
+    line = strip_comment(line)
     for name, value in line:gmatch(COLORLET) do
       lets[name] = value
     end
@@ -125,8 +143,11 @@ function LatexNamePicker.scan_lines(lines)
         local spec_col, _, rgb = latex:parse_color(line, spec_init)
         -- Anchored: a model this plugin does not resolve ({named}) must not
         -- borrow the specification of a later definition on the same line.
-        if rgb and spec_col == spec_init then
-          names[line:sub(start_col, end_col)] = rgb
+        local name = line:sub(start_col, end_col)
+        -- \providecolor leaves a color that already exists alone.
+        local provide = line:sub(1, start_col - 1):match("\\providecolor%[?[^%]{]*%]?{$")
+        if rgb and spec_col == spec_init and not (provide and (names[name] or BUILTIN[name])) then
+          names[name] = rgb
         end
       end
       init = end_col + 1

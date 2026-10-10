@@ -572,6 +572,30 @@ describe("Color detection test", function()
       assert.same({ 1, 0, 0 }, names.b)
     end)
 
+    it("skips definitions TeX never reads", function()
+      local names, lets = latex_name.scan_lines({
+        [[\definecolor{brand}{RGB}{255, 0, 0}]],
+        [[% \definecolor{brand}{RGB}{0, 0, 255}]],
+        [[\definecolor{pct}{gray}{0} 50\% % \definecolor{pct}{gray}{1}]],
+        [[\\ % \colorlet{let}{red}]],
+      })
+      assert.same({ 1, 0, 0 }, names.brand)
+      assert.same({ 0, 0, 0 }, names.pct)
+      assert.same({}, lets)
+    end)
+
+    it("lets \\providecolor leave an existing color alone", function()
+      local names = latex_name.scan_lines({
+        [[\definecolor{brand}{RGB}{255, 0, 0}]],
+        [[\providecolor{brand}{RGB}{0, 0, 255}]],
+        [[\providecolor{red}{RGB}{0, 0, 255}]],
+        [[\providecolor{nuevo}{RGB}{0, 0, 255}]],
+      })
+      assert.same({ 1, 0, 0 }, names.brand)
+      assert.is_nil(names.red)
+      assert.same({ 0, 0, 1 }, names.nuevo)
+    end)
+
     it("pairs several definitions on one line", function()
       local names = latex_name.scan_lines({
         [[\definecolor{a}{gray}{0} \definecolor{b}{gray}{1}]],
