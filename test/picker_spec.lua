@@ -247,6 +247,8 @@ describe("Color detection test", function()
   it("Custom Entries", function()
     test_rgb(custom_entries({ red = "#ff0000" }), " red ", { 255, 0, 0 }, nil)
     test_rgb(custom_entries({ [ [[foo\bar]] ] = "#ff0000" }), [[ foo\bar ]], { 255, 0, 0 }, nil)
+    -- No entry survives validation: nothing matches, nothing crashes.
+    test_rgb(custom_entries({ red = "invalid" }), " red ", nil)
 
     local orig = vim.opt.iskeyword:get()
     vim.opt.iskeyword = { "@", "48-57", "_", "128-167", "224-235" } -- default for Lua
