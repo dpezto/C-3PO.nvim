@@ -207,4 +207,39 @@ describe("Highlighter", function()
       vim.api.nvim_buf_delete(hidden, { force = true })
     end)
   end)
+
+  describe("lifecycle", function()
+    it("does not repaint after a disable that follows an edit", function()
+      bufnr = scratch({ "#ff0000" })
+      highlighter:enable(bufnr)
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "#00ff00" })
+      highlighter:disable(bufnr)
+      vim.wait(50, function()
+        return false
+      end)
+      assert.equal(0, #marks(bufnr))
+    end)
+
+    it("runs one repaint per edit after a disable/enable cycle", function()
+      bufnr = scratch({ "#ff0000" })
+      highlighter:enable(bufnr)
+      highlighter:disable(bufnr)
+      highlighter:enable(bufnr)
+      local calls = 0
+      local update = highlighter.update
+      highlighter.update = function(...)
+        calls = calls + 1
+        return update(...)
+      end
+      local ok, err = pcall(function()
+        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "#00ff00" })
+        vim.wait(50, function()
+          return false
+        end)
+      end)
+      highlighter.update = update
+      assert(ok, err)
+      assert.equal(1, calls)
+    end)
+  end)
 end)
