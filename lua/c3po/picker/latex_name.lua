@@ -161,8 +161,11 @@ local function resolve(names, lets)
   end
 end
 
----@type table<string, table<string, RGB>> #Keyed by project root, \colorlet resolved
+---@alias c3po.LatexNameFile { path: string, names: table<string, RGB>, lets: table<string, string> }
+---@type table<string, c3po.LatexNameFile[]> #Keyed by project root
 local project = {}
+---@type table<integer, table<string, RGB>> #Keyed by bufnr: the project but the buffer's own file, \colorlet resolved
+local bases = {}
 ---@type table<integer, table<string, RGB>> #Keyed by bufnr, only while modified
 local live = {}
 ---@type table<integer, integer> #The changedtick each live entry was built from
@@ -185,12 +188,11 @@ local function root_of(bufnr)
 end
 
 ---@param root string
----@return table<string, RGB>
----@return table<string, string>
+---@return c3po.LatexNameFile[]
 local function scan_project(root)
-  local names, lets = {}, {}
+  local scanned = {}
   if root == "" then
-    return names, lets
+    return scanned
   end
   -- ponytail: every *.tex/*.sty under the project root, capped at 200 files.
   -- Following \input/\include properly needs TEXINPUTS, extension inference,
@@ -204,11 +206,10 @@ local function scan_project(root)
     local ok, lines = pcall(vim.fn.readfile, path)
     if ok then
       local found, let = LatexNamePicker.scan_lines(lines)
-      names = vim.tbl_extend("force", names, found)
-      lets = vim.tbl_extend("force", lets, let)
+      table.insert(scanned, { path = vim.fs.normalize(path), names = found, lets = let })
     end
   end
-  return names, lets
+  return scanned
 end
 
 ---Every color name visible from this buffer: builtins, then the project's
@@ -222,12 +223,26 @@ function LatexNamePicker.names(bufnr)
     roots[bufnr] = root
   end
 
-  local base = project[root]
+  local base = bases[bufnr]
   if base == nil then
-    local names, lets = scan_project(root)
+    local files = project[root]
+    if files == nil then
+      files = scan_project(root)
+      project[root] = files
+    end
+    -- The buffer's own file is left out: the buffer is scanned below, and a
+    -- definition deleted from it must not live on through the copy on disk.
+    local own = vim.fs.normalize(vim.api.nvim_buf_get_name(bufnr))
+    local names, lets = {}, {}
+    for _, file in ipairs(files) do
+      if file.path ~= own then
+        names = vim.tbl_extend("force", names, file.names)
+        lets = vim.tbl_extend("force", lets, file.lets)
+      end
+    end
     base = vim.tbl_extend("force", BUILTIN, names)
     resolve(base, lets)
-    project[root] = base
+    bases[bufnr] = base
   end
 
   -- The buffer is scanned whether or not it is modified: it may be a scratch
@@ -272,7 +287,7 @@ function LatexNamePicker:init()
     group = vim.api.nvim_create_augroup("c3po-latex-name", {}),
     pattern = { "*.tex", "*.sty" },
     callback = function()
-      project, live, live_tick, roots = {}, {}, {}, {}
+      project, bases, live, live_tick, roots = {}, {}, {}, {}, {}
       local highlighter = require("c3po.highlighter")
       for bufnr in pairs(highlighter.attached_buffer) do
         if vim.api.nvim_buf_is_valid(bufnr) and TEX_FT[vim.bo[bufnr].filetype] then

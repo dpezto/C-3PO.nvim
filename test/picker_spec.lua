@@ -688,6 +688,25 @@ describe("Color detection test", function()
       vim.fn.delete(root, "rf")
     end)
 
+    it("forgets a saved definition deleted from the buffer", function()
+      latex_name.names = real_names
+      local root = vim.fn.tempname()
+      vim.fn.mkdir(root, "p")
+      vim.fn.writefile({}, root .. "/.latexmkrc")
+      vim.fn.writefile({ [[\definecolor{tono}{gray}{1}]] }, root .. "/otro.tex")
+      vim.fn.writefile({ [[\definecolor{tono}{gray}{0}]], [[\definecolor{solo}{gray}{0}]] }, root .. "/main.tex")
+      vim.cmd.edit(root .. "/main.tex")
+      local bufnr = vim.api.nvim_get_current_buf()
+      vim.bo[bufnr].filetype = "tex"
+      assert.same({ 0, 0, 0 }, latex_name.names(bufnr).tono)
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
+      -- Back to the other file's definition, and gone where there is none.
+      assert.same({ 1, 1, 1 }, latex_name.names(bufnr).tono)
+      assert.is_nil(latex_name.names(bufnr).solo)
+      vim.cmd.bwipeout({ bang = true })
+      vim.fn.delete(root, "rf")
+    end)
+
     it("leaves a \\colorlet cycle unresolved instead of looping", function()
       latex_name.names = real_names
       local bufnr = vim.api.nvim_create_buf(false, true)
