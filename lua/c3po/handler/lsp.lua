@@ -4,17 +4,6 @@ local api = require("c3po.utils.api")
 -- to vim.lsp.document_color, which nvim 0.12+ enables by default.
 local M = {}
 
----@param range lsp.Range
----@param cursor { [1]: integer, [2]: integer } (0,0)-index
----@return boolean
-local function is_within(range, cursor)
-  -- lsp.Range is 0-based and the end position is exclusive.
-  return range.start.line <= cursor[1]
-    and range.start.character <= cursor[2]
-    and range["end"].line >= cursor[1]
-    and range["end"].character > cursor[2]
-end
-
 ---@return integer? start_col 1-indexed
 ---@return integer? end_col 1-indexed, inclusive
 ---@return RGB?
@@ -28,12 +17,21 @@ function M.pick()
   end
   local param = { textDocument = vim.lsp.util.make_text_document_params() }
   local results = vim.lsp.buf_request_sync(0, "textDocument/documentColor", param, 200) or {}
-  local cursor = { api.get_cursor() }
-  for _, res in pairs(results) do
+  local row, col = api.get_cursor()
+  local line = vim.api.nvim_get_current_line()
+  for client_id, res in pairs(results) do
+    local client = vim.lsp.get_client_by_id(client_id)
+    local encoding = client and client.offset_encoding or "utf-16"
     for _, info in ipairs(res.result or {}) do
       local range, color = info.range, info.color
-      if is_within(range, cursor) then
-        return range.start.character + 1, range["end"].character, { color.red, color.green, color.blue }, color.alpha
+      -- lsp.Range is 0-based and the end position is exclusive. Its characters
+      -- are counted in the server's encoding (UTF-16 by default), not in bytes.
+      if range.start.line == row and range["end"].line == row then
+        local start_col = vim.str_byteindex(line, encoding, range.start.character, false)
+        local end_col = vim.str_byteindex(line, encoding, range["end"].character, false)
+        if start_col <= col and col < end_col then
+          return start_col + 1, end_col, { color.red, color.green, color.blue }, color.alpha
+        end
       end
     end
   end

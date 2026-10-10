@@ -49,7 +49,7 @@ end
 ---@return integer? start
 ---@return integer? end
 ---@return string? ... submatches
-function pattern.find(str, pat, init)
+local function find(str, pat, init)
   -- matchlist() considers a string containing `\0` as a blob and cannot process them.
   if str:find("\0") then
     return
@@ -72,6 +72,36 @@ function pattern.find(str, pat, init)
     result = vim.tbl_map(empty2nil, result)
     return init + start0, init + end0 - 1, unpack(result)
   end
+end
+
+-- Where each pattern last found nothing. Highlighting walks a line left to
+-- right, asking every pattern again from just past each color found, and a
+-- pattern with no match left would rescan the rest of the line every time:
+-- quadratic in the colors on the line.
+---@type table<string, { str: string, init: integer }>
+local missed = {}
+
+---@param str string
+---@param pat string
+---@param init number
+---@return integer? start
+---@return integer? end
+---@return string? ... submatches
+function pattern.find(str, pat, init)
+  local prev = missed[pat]
+  if prev and prev.str == str and prev.init <= init then
+    -- Every attempt that starts past init was already made, and failed, from
+    -- prev.init. The one at init itself can still differ, since `^` holds
+    -- there now (latex_name's `}{` pattern depends on that), so try just it.
+    if init == prev.init or regex("^" .. pat):match_str(str:sub(init)) == nil then
+      return
+    end
+  end
+  local result = vim.F.pack_len(find(str, pat, init))
+  if result.n == 0 then
+    missed[pat] = { str = str, init = init }
+  end
+  return unpack(result, 1, result.n)
 end
 
 ---Find the earliest match among several patterns.

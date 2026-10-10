@@ -99,6 +99,23 @@ local BUILTIN = {
   yellow = { 1, 1, 0 },
 }
 
+---The part of a line TeX reads: everything before the first unescaped `%`.
+---@param line string
+---@return string
+local function strip_comment(line)
+  local i = 1
+  while true do
+    i = line:find("[\\%%]", i)
+    if i == nil then
+      return line
+    elseif line:sub(i, i) == "%" then
+      return line:sub(1, i - 1)
+    end
+    -- A backslash escapes the next character, `\%` and `\\` alike.
+    i = i + 2
+  end
+end
+
 ---Collect every `\definecolor` / `\providecolor` these lines resolve, and every
 ---`\colorlet` they declare. Pure: no filesystem, no buffer, so it is the seam
 ---the tests drive.
@@ -109,6 +126,7 @@ local BUILTIN = {
 function LatexNamePicker.scan_lines(lines)
   local names, lets = {}, {}
   for _, line in ipairs(lines) do
+    line = strip_comment(line)
     for name, value in line:gmatch(COLORLET) do
       lets[name] = value
     end
@@ -125,8 +143,11 @@ function LatexNamePicker.scan_lines(lines)
         local spec_col, _, rgb = latex:parse_color(line, spec_init)
         -- Anchored: a model this plugin does not resolve ({named}) must not
         -- borrow the specification of a later definition on the same line.
-        if rgb and spec_col == spec_init then
-          names[line:sub(start_col, end_col)] = rgb
+        local name = line:sub(start_col, end_col)
+        -- \providecolor leaves a color that already exists alone.
+        local provide = line:sub(1, start_col - 1):match("\\providecolor%[?[^%]{]*%]?{$")
+        if rgb and spec_col == spec_init and not (provide and (names[name] or BUILTIN[name])) then
+          names[name] = rgb
         end
       end
       init = end_col + 1
@@ -161,8 +182,11 @@ local function resolve(names, lets)
   end
 end
 
----@type table<string, table<string, RGB>> #Keyed by project root, \colorlet resolved
+---@alias c3po.LatexNameFile { path: string, names: table<string, RGB>, lets: table<string, string> }
+---@type table<string, c3po.LatexNameFile[]> #Keyed by project root
 local project = {}
+---@type table<integer, table<string, RGB>> #Keyed by bufnr: the project but the buffer's own file, \colorlet resolved
+local bases = {}
 ---@type table<integer, table<string, RGB>> #Keyed by bufnr, only while modified
 local live = {}
 ---@type table<integer, integer> #The changedtick each live entry was built from
@@ -185,12 +209,11 @@ local function root_of(bufnr)
 end
 
 ---@param root string
----@return table<string, RGB>
----@return table<string, string>
+---@return c3po.LatexNameFile[]
 local function scan_project(root)
-  local names, lets = {}, {}
+  local scanned = {}
   if root == "" then
-    return names, lets
+    return scanned
   end
   -- ponytail: every *.tex/*.sty under the project root, capped at 200 files.
   -- Following \input/\include properly needs TEXINPUTS, extension inference,
@@ -204,11 +227,10 @@ local function scan_project(root)
     local ok, lines = pcall(vim.fn.readfile, path)
     if ok then
       local found, let = LatexNamePicker.scan_lines(lines)
-      names = vim.tbl_extend("force", names, found)
-      lets = vim.tbl_extend("force", lets, let)
+      table.insert(scanned, { path = vim.fs.normalize(path), names = found, lets = let })
     end
   end
-  return names, lets
+  return scanned
 end
 
 ---Every color name visible from this buffer: builtins, then the project's
@@ -222,12 +244,26 @@ function LatexNamePicker.names(bufnr)
     roots[bufnr] = root
   end
 
-  local base = project[root]
+  local base = bases[bufnr]
   if base == nil then
-    local names, lets = scan_project(root)
+    local files = project[root]
+    if files == nil then
+      files = scan_project(root)
+      project[root] = files
+    end
+    -- The buffer's own file is left out: the buffer is scanned below, and a
+    -- definition deleted from it must not live on through the copy on disk.
+    local own = vim.fs.normalize(vim.api.nvim_buf_get_name(bufnr))
+    local names, lets = {}, {}
+    for _, file in ipairs(files) do
+      if file.path ~= own then
+        names = vim.tbl_extend("force", names, file.names)
+        lets = vim.tbl_extend("force", lets, file.lets)
+      end
+    end
     base = vim.tbl_extend("force", BUILTIN, names)
     resolve(base, lets)
-    project[root] = base
+    bases[bufnr] = base
   end
 
   -- The buffer is scanned whether or not it is modified: it may be a scratch
@@ -268,17 +304,24 @@ function LatexNamePicker:init()
   -- Within a buffer the changedtick guard in names() keeps everything current.
   -- A write is the one event that changes what *other* buffers can see, since
   -- the project scan reads files rather than buffers.
+  local group = vim.api.nvim_create_augroup("c3po-latex-name", {})
   vim.api.nvim_create_autocmd("BufWritePost", {
-    group = vim.api.nvim_create_augroup("c3po-latex-name", {}),
+    group = group,
     pattern = { "*.tex", "*.sty" },
     callback = function()
-      project, live, live_tick, roots = {}, {}, {}, {}
+      project, bases, live, live_tick, roots = {}, {}, {}, {}, {}
       local highlighter = require("c3po.highlighter")
       for bufnr in pairs(highlighter.attached_buffer) do
         if vim.api.nvim_buf_is_valid(bufnr) and TEX_FT[vim.bo[bufnr].filetype] then
           highlighter:update(bufnr, 0, -1)
         end
       end
+    end,
+  })
+  vim.api.nvim_create_autocmd("BufWipeout", {
+    group = group,
+    callback = function(ev)
+      bases[ev.buf], live[ev.buf], live_tick[ev.buf], roots[ev.buf] = nil, nil, nil, nil
     end,
   })
 end
@@ -451,6 +494,12 @@ function LatexNamePicker.setup_completion()
     pattern = { "tex", "latex", "plaintex" },
     callback = function(ev)
       install(ev.buf)
+    end,
+  })
+  vim.api.nvim_create_autocmd("BufWipeout", {
+    group = "c3po-latex-completion",
+    callback = function(ev)
+      delegating[ev.buf], previous[ev.buf] = nil, nil
     end,
   })
   -- Under a lazy-loading plugin manager setup() itself often runs *from* the

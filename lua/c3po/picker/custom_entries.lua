@@ -39,6 +39,12 @@ function CustomEntries:init()
   table.sort(patterns, function(a, b)
     return #a.plain > #b.plain
   end)
+  -- Every entry may have been rejected; an empty pattern marks the picker as
+  -- having nothing to match, and keeps init() from running again.
+  if #patterns == 0 then
+    self.pattern = ""
+    return
+  end
   self.min_length = #patterns[#patterns].plain
   local vim_patterns = vim.tbl_map(function(v)
     return v.vim
@@ -53,11 +59,11 @@ end
 ---@return RGB? rgb
 ---@return Alpha? alpha
 function CustomEntries:parse_color(s, init)
-  if vim.tbl_isempty(self.color_table) then
+  self:init()
+  if self.pattern == "" then
     vim.notify_once("[c3po] no entries for the custom_entries picker", vim.log.levels.WARN)
     return
   end
-  self:init()
   init = vim.F.if_nil(init, 1) --[[@as integer]]
   if #s - init + 1 < self.min_length then
     return

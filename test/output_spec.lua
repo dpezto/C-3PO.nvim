@@ -89,10 +89,10 @@ describe("output", function()
 
   describe("css_lch", function()
     it("only RGB", function()
-      output_test(css_lch, { 255, 0, 0 }, nil, "lch(53.24% 104.54 40)")
+      output_test(css_lch, { 255, 0, 0 }, nil, "lch(54.29% 106.84 40.86)")
     end)
     it("with Alpha", function()
-      output_test(css_lch, { 255, 0, 0 }, 1, "lch(53.24% 104.54 40 / 100%)")
+      output_test(css_lch, { 255, 0, 0 }, 1, "lch(54.29% 106.84 40.86 / 100%)")
     end)
   end)
 

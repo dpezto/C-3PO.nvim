@@ -6,17 +6,24 @@ local hl = require("c3po.handler.highlight")
 ---@class c3po.Highlighter
 ---@field picker_ns_id integer
 ---@field attached_buffer table<integer, boolean> Keys are bufnrs.
+---@field attachment table<integer, table> Keys are bufnrs. Identifies the live nvim_buf_attach() callbacks.
+---@field stale table<integer, boolean> Keys are bufnrs. Hidden buffers to repaint once shown.
 local Highlighter = {
   picker_ns_id = vim.api.nvim_create_namespace("c3po-highlighter-picker"),
   attached_buffer = {},
+  attachment = {},
+  stale = {},
 }
 
 function Highlighter:init()
   local opts = require("c3po.config").options
+  local group = vim.api.nvim_create_augroup("c3po-highlighter", {})
   vim.api.nvim_create_autocmd("ColorScheme", {
+    group = group,
     callback = function()
       hl.reset()
-      -- Re-highlight only visible buffers.
+      -- Re-highlight only visible buffers. The hidden ones wait until they are
+      -- shown: their marks name highlight groups the colorscheme has cleared.
       local visible_buf = {}
       for _, win in ipairs(vim.api.nvim_list_wins()) do
         visible_buf[vim.api.nvim_win_get_buf(win)] = true
@@ -25,13 +32,40 @@ function Highlighter:init()
         if visible_buf[bufnr] then
           self:update(bufnr, 0, -1)
         else
-          self:disable(bufnr)
+          self.stale[bufnr] = true
         end
       end
     end,
   })
+  vim.api.nvim_create_autocmd("BufWinEnter", {
+    group = group,
+    callback = function(args)
+      if self.stale[args.buf] then
+        self.stale[args.buf] = nil
+        self:update(args.buf, 0, -1)
+      end
+    end,
+  })
+  -- Reloading a buffer (:edit!) detaches it, but it is still meant to be
+  -- highlighted.
+  vim.api.nvim_create_autocmd("BufReadPost", {
+    group = group,
+    callback = function(args)
+      if self.attached_buffer[args.buf] and not self.attachment[args.buf] then
+        self.attached_buffer[args.buf] = nil
+        self:enable(args.buf)
+      end
+    end,
+  })
+  vim.api.nvim_create_autocmd("BufWipeout", {
+    group = group,
+    callback = function(args)
+      self:disable(args.buf)
+    end,
+  })
   if not opts.highlighter.update_insert then
     vim.api.nvim_create_autocmd("InsertLeave", {
+      group = group,
       callback = function(args)
         self:update(args.buf, 0, -1)
       end,
@@ -39,18 +73,12 @@ function Highlighter:init()
   end
 end
 
----Return true if ft is valid.
+---Return true if ft is valid for auto_enable.
 ---@param ft string
 ---@return boolean
 local function ft_filter(ft)
-  -- Disable in UI
-  if ft == "c3po-ui" then
-    return false
-  end
   local opts = require("c3po.config").options
-  if not opts.highlighter.auto_enable then
-    return true
-  elseif #opts.highlighter.filetypes > 0 then
+  if #opts.highlighter.filetypes > 0 then
     return vim.tbl_contains(opts.highlighter.filetypes, ft)
   else
     return not vim.tbl_contains(opts.highlighter.excludes, ft)
@@ -58,34 +86,43 @@ local function ft_filter(ft)
 end
 
 ---@param bufnr? integer
-function Highlighter:enable(bufnr)
+---@param auto? boolean Apply the filetype filters of auto_enable.
+function Highlighter:enable(bufnr, auto)
   bufnr = utils.ensure_bufnr(bufnr)
   if self.attached_buffer[bufnr] then
     return
   end
-  -- filetype filter for auto_enable
   local filetype = vim.api.nvim_get_option_value("filetype", { buf = bufnr })
-  if not ft_filter(filetype) then
+  -- Disable in UI
+  if filetype == "c3po-ui" or (auto and not ft_filter(filetype)) then
     return
   end
   self.attached_buffer[bufnr] = true
   self:update(bufnr, 0, -1)
 
   local opts = require("c3po.config").options
+  -- A disable/enable cycle attaches again before the old callbacks have had a
+  -- chance to detach; this tells them apart.
+  local id = {}
+  self.attachment[bufnr] = id
   vim.api.nvim_buf_attach(bufnr, false, {
     on_lines = function(_, _, _, first_line, _, last_line)
-      if self.attached_buffer[bufnr] == nil then
+      if self.attachment[bufnr] ~= id then
         return true
       elseif not opts.highlighter.update_insert and vim.fn.mode() == "i" then
         return
       end
       -- Without vim.schedule(), it does not update correctly when undo/redo
       vim.schedule(function()
-        self:update(bufnr, first_line, last_line)
+        if self.attachment[bufnr] == id then
+          self:update(bufnr, first_line, last_line)
+        end
       end)
     end,
     on_detach = function()
-      self.attached_buffer[bufnr] = nil
+      if self.attachment[bufnr] == id then
+        self.attachment[bufnr] = nil
+      end
     end,
   })
 end
@@ -94,6 +131,8 @@ end
 function Highlighter:disable(bufnr)
   bufnr = utils.ensure_bufnr(bufnr)
   self.attached_buffer[bufnr] = nil
+  self.attachment[bufnr] = nil
+  self.stale[bufnr] = nil
   if utils.bufnr_is_valid(bufnr) then
     vim.api.nvim_buf_clear_namespace(bufnr, self.picker_ns_id, 0, -1)
   end
@@ -115,6 +154,10 @@ end
 function Highlighter:update(bufnr, start_line, end_line)
   if not utils.bufnr_is_valid(bufnr) then
     self:disable(bufnr)
+    return
+  end
+  -- Scheduled repaints and autocmds may arrive after the buffer was disabled.
+  if not self.attached_buffer[bufnr] then
     return
   end
 

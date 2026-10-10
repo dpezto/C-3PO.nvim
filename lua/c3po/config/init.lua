@@ -91,7 +91,14 @@ function M.setup(opts)
   if opts.disable_default_mappings then
     default = vim.tbl_extend("force", {}, default, { mappings = {} })
   end
+  -- `ui` is a module, so it is replaced rather than merged: merging would
+  -- recurse into the module itself, and through its self-referential __index
+  -- forever.
+  local ui = opts.ui or M.options.ui or default.ui
+  opts = vim.tbl_extend("force", {}, opts)
+  opts.ui, default.ui, M.options.ui = nil, nil, nil
   M.options = vim.tbl_deep_extend("force", {}, default, M.options, opts)
+  M.options.ui = ui
   for lhs, rhs in pairs(M.options.mappings) do
     if rhs == require("c3po.mapping").none then
       M.options.mappings[lhs] = nil

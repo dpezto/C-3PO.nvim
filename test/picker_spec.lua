@@ -99,6 +99,11 @@ describe("Color detection test", function()
       test_rgb(css_rgb, " rgba(100% 0% 100%) ", { 255, 0, 255 }, nil)
       test_rgb(css_rgb, " rgba(100% 0% 100% / 80%) ", { 255, 0, 255 }, 0.8)
     end)
+    it("Modern, mixed units and out-of-range channels", function()
+      test_rgb(css_rgb, " rgb(100% 0 0) ", { 255, 0, 0 }, nil)
+      -- Clamped, not rejected.
+      test_rgb(css_rgb, " rgb(300 -1 0) ", { 255, 0, 0 }, nil)
+    end)
     it("Legacy, rgb()", function()
       test_rgb(css_rgb, " rgb(255, 0, 255) ", { 255, 0, 255 }, nil)
       test_rgb(css_rgb, " rgb(255, 0, 255, 0.8) ", { 255, 0, 255 }, 0.8)
@@ -163,29 +168,40 @@ describe("Color detection test", function()
 
   describe("Lab Color: lab() function", function()
     it("lab() without alpha", function()
-      test_rgb(css_lab, " lab(60% 40% -20%) ", { 209, 109, 190 }, nil)
-      test_rgb(css_lab, " lab(60 50 -25) ", { 209, 109, 190 }, nil)
+      test_rgb(css_lab, " lab(60% 40% -20%) ", { 211, 106, 190 }, nil)
+      test_rgb(css_lab, " lab(60 50 -25) ", { 211, 106, 190 }, nil)
     end)
     it("lab() with alpha", function()
-      test_rgb(css_lab, " lab(60% 40% -20% / 80%) ", { 209, 109, 190 }, 0.8)
-      test_rgb(css_lab, " lab(60 50 -25 / 0.8) ", { 209, 109, 190 }, 0.8)
+      test_rgb(css_lab, " lab(60% 40% -20% / 80%) ", { 211, 106, 190 }, 0.8)
+      test_rgb(css_lab, " lab(60 50 -25 / 0.8) ", { 211, 106, 190 }, 0.8)
+    end)
+    it("is relative to D50, as CSS defines it", function()
+      -- The worked example in CSS Color 4: lab(44.36% 36.05 -58.99) is #7654cd.
+      test_rgb(css_lab, " lab(44.36% 36.05 -58.99) ", { 0x76, 0x54, 0xcd }, nil)
+    end)
+    it("clamps L and leaves a and b unbounded", function()
+      test_rgb(css_lab, " lab(150 0 0) ", { 255, 255, 255 }, nil)
+      test_rgb(css_lab, " lab(50 150 0) ", { 255, 0, 128 }, nil)
     end)
   end)
 
   describe("LCH Color: lch() function", function()
     it("lch() without alpha", function()
-      test_rgb(css_lch, " lch(60% 20% 270) ", { 108, 147, 197 }, nil)
-      test_rgb(css_lch, " lch(60 30 270deg) ", { 108, 147, 197 }, nil)
-      test_rgb(css_lch, " lch(60 30 300grad) ", { 108, 147, 197 }, nil)
-      test_rgb(css_lch, " lch(60 30 4.71rad) ", { 108, 147, 197 }, nil)
-      test_rgb(css_lch, " lch(60 30 0.75turn) ", { 108, 147, 197 }, nil)
+      test_rgb(css_lch, " lch(60% 20% 270) ", { 119, 146, 197 }, nil)
+      test_rgb(css_lch, " lch(60 30 270deg) ", { 119, 146, 197 }, nil)
+      test_rgb(css_lch, " lch(60 30 300grad) ", { 119, 146, 197 }, nil)
+      test_rgb(css_lch, " lch(60 30 4.71rad) ", { 119, 146, 197 }, nil)
+      test_rgb(css_lch, " lch(60 30 0.75turn) ", { 119, 146, 197 }, nil)
     end)
     it("lch() with alpha", function()
-      test_rgb(css_lch, " lch(60% 20% 270 / 80%) ", { 108, 147, 197 }, 0.8)
-      test_rgb(css_lch, " lch(60 30 270deg / 0.8) ", { 108, 147, 197 }, 0.8)
-      test_rgb(css_lch, " lch(60 30 300grad / 0.8) ", { 108, 147, 197 }, 0.8)
-      test_rgb(css_lch, " lch(60 30 4.71rad / 0.8) ", { 108, 147, 197 }, 0.8)
-      test_rgb(css_lch, " lch(60 30 0.75turn / 0.8) ", { 108, 147, 197 }, 0.8)
+      test_rgb(css_lch, " lch(60% 20% 270 / 80%) ", { 119, 146, 197 }, 0.8)
+      test_rgb(css_lch, " lch(60 30 270deg / 0.8) ", { 119, 146, 197 }, 0.8)
+      test_rgb(css_lch, " lch(60 30 300grad / 0.8) ", { 119, 146, 197 }, 0.8)
+      test_rgb(css_lch, " lch(60 30 4.71rad / 0.8) ", { 119, 146, 197 }, 0.8)
+      test_rgb(css_lch, " lch(60 30 0.75turn / 0.8) ", { 119, 146, 197 }, 0.8)
+    end)
+    it("lch() beyond the reference range", function()
+      test_rgb(css_lch, " lch(50 200 0) ", { 255, 0, 133 }, nil)
     end)
   end)
 
@@ -197,6 +213,9 @@ describe("Color detection test", function()
     it("oklab() with alpha", function()
       test_rgb(css_oklab, " oklab(50% 40% -40% / 80%) ", { 145, 29, 184 }, 0.8)
       test_rgb(css_oklab, " oklab(0.5 0.16 -0.16 / 0.8) ", { 145, 29, 184 }, 0.8)
+    end)
+    it("oklab() beyond the reference range", function()
+      test_rgb(css_oklab, " oklab(0.5 0.5 0) ", { 255, 0, 88 }, nil)
     end)
   end)
 
@@ -215,6 +234,9 @@ describe("Color detection test", function()
       test_rgb(css_oklch, " oklch(0.6 0.08 4.71rad / 0.8) ", { 109, 126, 177 }, 0.8)
       test_rgb(css_oklch, " oklch(0.6 0.08 0.75turn / 0.8) ", { 109, 126, 177 }, 0.8)
     end)
+    it("oklch() beyond the reference range", function()
+      test_rgb(css_oklch, " oklch(0.5 0.45 0) ", { 254, 0, 89 }, nil)
+    end)
   end)
 
   it("Named Colors", function()
@@ -225,6 +247,8 @@ describe("Color detection test", function()
   it("Custom Entries", function()
     test_rgb(custom_entries({ red = "#ff0000" }), " red ", { 255, 0, 0 }, nil)
     test_rgb(custom_entries({ [ [[foo\bar]] ] = "#ff0000" }), [[ foo\bar ]], { 255, 0, 0 }, nil)
+    -- No entry survives validation: nothing matches, nothing crashes.
+    test_rgb(custom_entries({ red = "invalid" }), " red ", nil)
 
     local orig = vim.opt.iskeyword:get()
     vim.opt.iskeyword = { "@", "48-57", "_", "128-167", "224-235" } -- default for Lua
@@ -342,6 +366,9 @@ describe("Color detection test", function()
         { fg = "#ff0000", bg = "#0000ff" }
       )
     end)
+    it("defaults to valid colors", function()
+      test_hl_def(ansi_escape(), " \\u001b[37m ", { fg = "#cccccc", bg = "#0c0c0c" })
+    end)
   end)
   -- Every other case in this file pads the color with a leading and trailing
   -- space, which hid the boundary and ordering bugs below.
@@ -378,6 +405,39 @@ describe("Color detection test", function()
       assert.equals(1, alpha)
       _, _, _, alpha = css_rgb:parse_color(" rgba(0, 0, 0, -1) ")
       assert.equals(0, alpha)
+    end)
+
+    it("finds a match that only begins where the scan resumes", function()
+      -- From the start, `#000000` follows a keyword char and is no color. From
+      -- column 5, `^` holds right before it; a remembered miss must not hide it.
+      local s = "#fff#000000"
+      local start, end_ = hex:parse_color(s)
+      assert.equals(4, end_)
+      start, end_ = hex:parse_color(s, 5)
+      assert.equals(5, start)
+      assert.equals(11, end_)
+    end)
+
+    it("scans a long line in linear time", function()
+      local function scan(n)
+        local colors = {}
+        for i = 1, n do
+          colors[i] = ("#%06x"):format(i)
+        end
+        local bufnr = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { table.concat(colors, " ") })
+        local start = vim.uv.hrtime()
+        local infos = require("c3po.handler.picker").info_in_range(bufnr, 0, -1, { hex, css_rgb, css_hsl, css_lab })
+        local elapsed = vim.uv.hrtime() - start
+        vim.api.nvim_buf_delete(bufnr, { force = true })
+        assert.equals(n, #infos)
+        return elapsed
+      end
+      -- Compare growth, not wall time, so slow runners (coverage hooks, JIT
+      -- off) don't fail it: 4x the colors costs ~4x when linear, ~16x when
+      -- quadratic.
+      local ratio = scan(2000) / scan(500)
+      assert.is_true(ratio < 8, ("4x the colors took %.1fx the time"):format(ratio))
     end)
   end)
   describe("LaTeX (xcolor)", function()
@@ -538,6 +598,30 @@ describe("Color detection test", function()
       assert.same({ 1, 0, 0 }, names.b)
     end)
 
+    it("skips definitions TeX never reads", function()
+      local names, lets = latex_name.scan_lines({
+        [[\definecolor{brand}{RGB}{255, 0, 0}]],
+        [[% \definecolor{brand}{RGB}{0, 0, 255}]],
+        [[\definecolor{pct}{gray}{0} 50\% % \definecolor{pct}{gray}{1}]],
+        [[\\ % \colorlet{let}{red}]],
+      })
+      assert.same({ 1, 0, 0 }, names.brand)
+      assert.same({ 0, 0, 0 }, names.pct)
+      assert.same({}, lets)
+    end)
+
+    it("lets \\providecolor leave an existing color alone", function()
+      local names = latex_name.scan_lines({
+        [[\definecolor{brand}{RGB}{255, 0, 0}]],
+        [[\providecolor{brand}{RGB}{0, 0, 255}]],
+        [[\providecolor{red}{RGB}{0, 0, 255}]],
+        [[\providecolor{nuevo}{RGB}{0, 0, 255}]],
+      })
+      assert.same({ 1, 0, 0 }, names.brand)
+      assert.is_nil(names.red)
+      assert.same({ 0, 0, 1 }, names.nuevo)
+    end)
+
     it("pairs several definitions on one line", function()
       local names = latex_name.scan_lines({
         [[\definecolor{a}{gray}{0} \definecolor{b}{gray}{1}]],
@@ -650,6 +734,25 @@ describe("Color detection test", function()
       local bufnr = vim.api.nvim_get_current_buf()
       vim.bo[bufnr].filetype = "tex"
       assert.same({ 0, 0, 0 }, latex_name.names(bufnr).tono)
+      vim.cmd.bwipeout({ bang = true })
+      vim.fn.delete(root, "rf")
+    end)
+
+    it("forgets a saved definition deleted from the buffer", function()
+      latex_name.names = real_names
+      local root = vim.fn.tempname()
+      vim.fn.mkdir(root, "p")
+      vim.fn.writefile({}, root .. "/.latexmkrc")
+      vim.fn.writefile({ [[\definecolor{tono}{gray}{1}]] }, root .. "/otro.tex")
+      vim.fn.writefile({ [[\definecolor{tono}{gray}{0}]], [[\definecolor{solo}{gray}{0}]] }, root .. "/main.tex")
+      vim.cmd.edit(root .. "/main.tex")
+      local bufnr = vim.api.nvim_get_current_buf()
+      vim.bo[bufnr].filetype = "tex"
+      assert.same({ 0, 0, 0 }, latex_name.names(bufnr).tono)
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {})
+      -- Back to the other file's definition, and gone where there is none.
+      assert.same({ 1, 1, 1 }, latex_name.names(bufnr).tono)
+      assert.is_nil(latex_name.names(bufnr).solo)
       vim.cmd.bwipeout({ bang = true })
       vim.fn.delete(root, "rf")
     end)

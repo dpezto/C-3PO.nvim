@@ -80,6 +80,63 @@ describe("Commands", function()
     end)
   end)
 
+  describe("C3 pick (LSP)", function()
+    ---An in-process language server that reports one color.
+    ---@param info lsp.ColorInformation
+    local function fake_server(info)
+      return function(dispatchers)
+        local closing = false
+        return {
+          request = function(method, _, callback)
+            if method == "initialize" then
+              callback(nil, { capabilities = { colorProvider = true } })
+            elseif method == "textDocument/documentColor" then
+              callback(nil, { info })
+            else
+              callback(nil, nil)
+            end
+            return true, 1
+          end,
+          notify = function(method)
+            if method == "exit" then
+              dispatchers.on_exit(0, 15)
+            end
+            return true
+          end,
+          is_closing = function()
+            return closing
+          end,
+          terminate = function()
+            closing = true
+            dispatchers.on_exit(0, 15)
+          end,
+        }
+      end
+    end
+
+    it("converts the server's UTF-16 offsets to bytes", function()
+      utils.set_lines(0, -1, { "é #ff0000;" })
+      local id = vim.lsp.start({
+        name = "c3po-fake",
+        cmd = fake_server({
+          -- `é` is one UTF-16 unit but two bytes.
+          range = { start = { line = 0, character = 2 }, ["end"] = { line = 0, character = 9 } },
+          color = { red = 0, green = 0, blue = 1, alpha = 1 },
+        }),
+      })
+      finally(function()
+        vim.lsp.get_client_by_id(id):stop(true)
+        vim.wait(1000, function()
+          return vim.lsp.get_client_by_id(id) == nil
+        end)
+      end)
+      vim.api.nvim_win_set_cursor(0, { 1, 5 })
+      vim.cmd("C3 pick")
+      feed("<CR>")
+      assert.equal("é #0000ffff;", utils.get_line())
+    end)
+  end)
+
   describe("C3 yank", function()
     it("Yanks in the first output format by default", function()
       utils.set_lines(0, -1, { "#ff0000" })
@@ -94,6 +151,22 @@ describe("Commands", function()
       utils.set_lines(0, -1, { "#ff0000" })
       vim.cmd("C3 yank css_rgb")
       assert.equal("rgb(255 0 0)", vim.fn.getreg('"'))
+    end)
+
+    it("Yanks a named color, which :C3 pick leaves alone", function()
+      local opts = require("c3po.config").options
+      local saved = opts.pickers
+      opts.pickers = { require("c3po.picker.latex_name") }
+      vim.bo.filetype = "tex"
+      finally(function()
+        vim.bo.filetype = ""
+        opts.pickers = saved
+      end)
+      utils.set_lines(0, -1, { [[\definecolor{R2D2}{RGB}{0, 112, 192}]], [[\textcolor{R2D2}{x}]] })
+      vim.api.nvim_win_set_cursor(0, { 2, 13 })
+      vim.fn.setreg('"', "")
+      vim.cmd("C3 yank")
+      assert.equal("#0070c0", vim.fn.getreg('"'))
     end)
   end)
 
@@ -217,6 +290,87 @@ describe("Commands", function()
         vim.cmd("C3 pick")
         feed("gWB<CR><CR>")
         assert.equal("#ffffff", utils.get_line())
+      end)
+
+      it("restores the history entry under the cursor", function()
+        vim.cmd("C3 pick")
+        feed("L<CR>")
+        vim.cmd("C3 pick")
+        feed("jL<CR>")
+        clear_buffer()
+        vim.cmd("C3 pick")
+        feed("g")
+        -- Where a click on the second entry leaves the cursor; the index stays.
+        vim.api.nvim_win_set_cursor(0, { vim.fn.line("$"), 8 })
+        feed("<CR><CR>")
+        assert.equal("#ff0000", utils.get_line())
+      end)
+
+      it("ignores <CR> on an empty history", function()
+        vim.cmd("C3 pick")
+        feed("g")
+        core:complete()
+        assert.equal(2, utils.num_win())
+        feed("q")
+      end)
+
+      it("does not carry the alpha of the previous pick over", function()
+        utils.set_lines(0, -1, { "#ff000080" })
+        vim.cmd("C3 pick")
+        feed("q")
+        utils.set_lines(0, -1, { "#00ff00" })
+        vim.cmd("C3 pick")
+        feed("<CR>")
+        assert.equal("#00ff00", utils.get_line())
+      end)
+
+      it("publishes the restored color, and clears it on quit", function()
+        vim.cmd("C3 pick")
+        feed("L<CR>")
+        clear_buffer()
+        vim.cmd("C3 pick")
+        feed("g<CR>")
+        assert.equal("#ff0000", vim.g.c3po_color)
+        feed("q")
+        assert.equal("", vim.g.c3po_color)
+      end)
+
+      describe("with auto_close off", function()
+        local opts = require("c3po.config").options
+
+        before_each(function()
+          opts.auto_close = false
+        end)
+
+        after_each(function()
+          opts.auto_close = true
+        end)
+
+        it("writes to the buffer it was picked from", function()
+          local source = vim.api.nvim_get_current_buf()
+          local other = vim.api.nvim_create_buf(true, false)
+          vim.api.nvim_buf_set_lines(other, 0, -1, false, { "other" })
+          utils.set_lines(0, -1, { "#ffffff" })
+          local win = vim.api.nvim_get_current_win()
+          vim.cmd("C3 pick")
+          vim.api.nvim_win_set_buf(win, other)
+          feed("0<CR>")
+          assert.same({ "other" }, vim.api.nvim_buf_get_lines(other, 0, -1, false))
+          assert.same({ "#00ffff" }, vim.api.nvim_buf_get_lines(source, 0, -1, false))
+          vim.api.nvim_win_set_buf(win, source)
+          vim.api.nvim_buf_delete(other, { force = true })
+        end)
+
+        it("follows the color when the buffer is edited meanwhile", function()
+          local source = vim.api.nvim_get_current_buf()
+          utils.set_lines(0, -1, { "x #ffffff" })
+          vim.api.nvim_win_set_cursor(0, { 1, 2 })
+          vim.cmd("C3 pick")
+          vim.api.nvim_buf_set_lines(source, 0, 0, false, { "above" })
+          vim.api.nvim_buf_set_text(source, 1, 0, 1, 0, { "yy" })
+          feed("0<CR>")
+          assert.same({ "above", "yyx #00ffff" }, vim.api.nvim_buf_get_lines(source, 0, -1, false))
+        end)
       end)
 
       describe("increase", function()
@@ -343,6 +497,13 @@ describe("Commands", function()
       utils.set_lines(0, -1, { "foo" })
       feed("A<Plug>(c3po-insert)MjMjM<CR>")
       assert.equal("foo#808080", utils.get_line())
+    end)
+
+    it("publishes the color", function()
+      vim.g.c3po_color = ""
+      feed("i<Plug>(c3po-insert)")
+      assert.equal("#000000", vim.g.c3po_color)
+      feed("q")
     end)
   end)
 

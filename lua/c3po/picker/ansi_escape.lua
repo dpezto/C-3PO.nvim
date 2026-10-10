@@ -53,7 +53,7 @@ local definition = {
 
 -- This color scheme came from Campbell (WindowsTerminal)
 local default_name2color = {
-  foreground = "#c3poc3po",
+  foreground = "#cccccc",
   background = "#0c0c0c",
   black = "#0c0c0c",
   red = "#c50f1f",
@@ -62,7 +62,7 @@ local default_name2color = {
   blue = "#0037da",
   magenta = "#881798",
   cyan = "#3a96dd",
-  white = "#c3poc3po",
+  white = "#cccccc",
   bright_black = "#767676",
   bright_red = "#e74856",
   bright_green = "#16c60c",

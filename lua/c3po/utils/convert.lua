@@ -353,11 +353,26 @@ function convert.xyz2rgb(XYZ)
   return rgb_clamp(RGB)
 end
 
----@param XYZ XYZ
+-- CSS Lab and LCH are relative to D50, while sRGB is D65: XYZ crosses between
+-- them by Bradford chromatic adaptation. The matrices and the D50 white are
+-- the ones CSS Color 4 uses (https://www.w3.org/TR/css-color-4/#color-conversion-code).
+local d65_to_d50 = {
+  { 1.0479297925449969, 0.022946870601609652, -0.05019226628920524 },
+  { 0.02962780877005599, 0.9904344267538799, -0.017073799063418826 },
+  { -0.009243040646204504, 0.015055191490298152, 0.7518742814281371 },
+}
+local d50_to_d65 = {
+  { 0.955473421488075, -0.02309845494876471, 0.06325924320057072 },
+  { -0.0283697093338637, 1.0099953980813041, 0.021041441191917323 },
+  { 0.012314014864481998, -0.020507649298898964, 1.330365926242124 },
+}
+local d50 = { 0.3457 / 0.3585, 1, (1 - 0.3457 - 0.3585) / 0.3585 }
+
+---@param XYZ XYZ #Relative to D50
 ---@return Lab
 function convert.xyz2lab(XYZ)
   local X, Y, Z = unpack(XYZ)
-  local Xn, Yn, Zn = 0.9505, 1, 1.089
+  local Xn, Yn, Zn = unpack(d50)
   local function f(t)
     if t > (6 / 29) ^ 3 then
       return 116 * t ^ (1 / 3) - 16
@@ -373,10 +388,10 @@ function convert.xyz2lab(XYZ)
 end
 
 ---@param Lab Lab
----@return XYZ
+---@return XYZ #Relative to D50
 function convert.lab2xyz(Lab)
   local L, a, b = unpack(Lab)
-  local Xn, Yn, Zn = 0.9505, 1, 1.089
+  local Xn, Yn, Zn = unpack(d50)
   local fy = (L + 16) / 116
   local fx = fy + (a / 500)
   local fz = fy - (b / 200)
@@ -398,13 +413,13 @@ end
 function convert.rgb2lab(RGB)
   local Linear = convert.rgb2linear(RGB)
   local XYZ = convert.linear2xyz(Linear)
-  return convert.xyz2lab(XYZ)
+  return convert.xyz2lab(product(d65_to_d50, XYZ))
 end
 
 ---@param Lab Lab
 ---@return RGB
 function convert.lab2rgb(Lab)
-  local XYZ = convert.lab2xyz(Lab)
+  local XYZ = product(d50_to_d65, convert.lab2xyz(Lab))
   local Linear = convert.xyz2linear(XYZ)
   local RGB = convert.linear2rgb(Linear)
   return rgb_clamp(RGB)
