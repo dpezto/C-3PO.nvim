@@ -73,18 +73,12 @@ function Highlighter:init()
   end
 end
 
----Return true if ft is valid.
+---Return true if ft is valid for auto_enable.
 ---@param ft string
 ---@return boolean
 local function ft_filter(ft)
-  -- Disable in UI
-  if ft == "c3po-ui" then
-    return false
-  end
   local opts = require("c3po.config").options
-  if not opts.highlighter.auto_enable then
-    return true
-  elseif #opts.highlighter.filetypes > 0 then
+  if #opts.highlighter.filetypes > 0 then
     return vim.tbl_contains(opts.highlighter.filetypes, ft)
   else
     return not vim.tbl_contains(opts.highlighter.excludes, ft)
@@ -92,14 +86,15 @@ local function ft_filter(ft)
 end
 
 ---@param bufnr? integer
-function Highlighter:enable(bufnr)
+---@param auto? boolean Apply the filetype filters of auto_enable.
+function Highlighter:enable(bufnr, auto)
   bufnr = utils.ensure_bufnr(bufnr)
   if self.attached_buffer[bufnr] then
     return
   end
-  -- filetype filter for auto_enable
   local filetype = vim.api.nvim_get_option_value("filetype", { buf = bufnr })
-  if not ft_filter(filetype) then
+  -- Disable in UI
+  if filetype == "c3po-ui" or (auto and not ft_filter(filetype)) then
     return
   end
   self.attached_buffer[bufnr] = true

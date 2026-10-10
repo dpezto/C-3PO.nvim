@@ -54,7 +54,7 @@ local function setup(user_opts)
       if ok and stat and stat.size > opts.highlighter.max_byte then
         return
       end
-      highlighter:enable(bufnr)
+      highlighter:enable(bufnr, true)
     end
     -- FileType rather than BufEnter: it fires once the filetype is actually
     -- set, so excludes work on buffers that get their filetype late (lazy's
