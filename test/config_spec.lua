@@ -84,6 +84,24 @@ describe("Config", function()
     end)
   end)
 
+  it("survives a second setup", function()
+    with_setup({}, function()
+      config.setup({ bar_len = 20 })
+      assert.equal(20, config.options.bar_len)
+      assert.is_function(config.options.ui.new)
+    end)
+  end)
+
+  it("replaces the ui module rather than merging into it", function()
+    local ui = { new = function() end }
+    ui.__index = ui
+    with_setup({ ui = ui }, function()
+      assert.equal(ui, config.options.ui)
+      config.setup({})
+      assert.equal(ui, config.options.ui)
+    end)
+  end)
+
   it("unmaps a default key set to mapping.none", function()
     with_setup({ mappings = { q = mapping.none } }, function()
       assert.is_nil(config.options.mappings.q)
