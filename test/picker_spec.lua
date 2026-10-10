@@ -419,19 +419,25 @@ describe("Color detection test", function()
     end)
 
     it("scans a long line in linear time", function()
-      local colors = {}
-      for i = 1, 2000 do
-        colors[i] = ("#%06x"):format(i)
+      local function scan(n)
+        local colors = {}
+        for i = 1, n do
+          colors[i] = ("#%06x"):format(i)
+        end
+        local bufnr = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { table.concat(colors, " ") })
+        local start = vim.uv.hrtime()
+        local infos = require("c3po.handler.picker").info_in_range(bufnr, 0, -1, { hex, css_rgb, css_hsl, css_lab })
+        local elapsed = vim.uv.hrtime() - start
+        vim.api.nvim_buf_delete(bufnr, { force = true })
+        assert.equals(n, #infos)
+        return elapsed
       end
-      local bufnr = vim.api.nvim_create_buf(false, true)
-      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { table.concat(colors, " ") })
-      local start = vim.uv.hrtime()
-      local infos = require("c3po.handler.picker").info_in_range(bufnr, 0, -1, { hex, css_rgb, css_hsl, css_lab })
-      local elapsed = (vim.uv.hrtime() - start) / 1e6
-      vim.api.nvim_buf_delete(bufnr, { force = true })
-      assert.equals(2000, #infos)
-      -- Quadratic took seconds here; linear takes tens of milliseconds.
-      assert.is_true(elapsed < 1000, ("took %d ms"):format(elapsed))
+      -- Compare growth, not wall time, so slow runners (coverage hooks, JIT
+      -- off) don't fail it: 4x the colors costs ~4x when linear, ~16x when
+      -- quadratic.
+      local ratio = scan(2000) / scan(500)
+      assert.is_true(ratio < 8, ("4x the colors took %.1fx the time"):format(ratio))
     end)
   end)
   describe("LaTeX (xcolor)", function()
