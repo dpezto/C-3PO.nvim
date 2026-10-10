@@ -276,6 +276,14 @@ describe("Commands", function()
         assert.equal("#ffffff", utils.get_line())
       end)
 
+      it("ignores <CR> on an empty history", function()
+        vim.cmd("C3 pick")
+        feed("g")
+        core:complete()
+        assert.equal(2, utils.num_win())
+        feed("q")
+      end)
+
       describe("with auto_close off", function()
         local opts = require("c3po.config").options
 

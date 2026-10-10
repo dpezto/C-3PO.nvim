@@ -129,6 +129,9 @@ function Core:complete()
   local point = self.ui:point_at()
   if point.type == "prev" then
     local color = self.prev_colors:get()
+    if color == nil then
+      return
+    end
     self.color:set_rgb(color:get_rgb())
     self.ui:toggle_prev_colors(false)
     return
