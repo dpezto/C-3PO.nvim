@@ -1,5 +1,36 @@
 # Changelog
 
+## [1.1.1](https://github.com/dpezto/C-3PO.nvim/compare/v1.1.0...v1.1.1) (2026-10-10)
+
+
+### Bug Fixes
+
+* **ansi_escape:** use a valid default for foreground and white ([293822b](https://github.com/dpezto/C-3PO.nvim/commit/293822bf583e9a0134dca50ae06d8ebdb7734236))
+* **command:** let :C3 yank read named LaTeX colors ([ec3b378](https://github.com/dpezto/C-3PO.nvim/commit/ec3b3784ba6553d3078d4715388d60851348a4e1))
+* **config:** stop a second setup() from overflowing the stack ([66e1ac8](https://github.com/dpezto/C-3PO.nvim/commit/66e1ac829f9c36b9bab9a3b564624ba053cdfee1))
+* **convert:** use the D50 white point for Lab and LCH ([6255901](https://github.com/dpezto/C-3PO.nvim/commit/62559010bbab71e59184149b6a23d500008b16fc))
+* **core:** ignore &lt;CR&gt; on an empty color history ([3255410](https://github.com/dpezto/C-3PO.nvim/commit/3255410fcd04f578d1f05f4320f4a7310c84f694))
+* **core:** keep g:c3po_color in sync on insert, quit and history restore ([c302e0f](https://github.com/dpezto/C-3PO.nvim/commit/c302e0fbd23744d17e77aba4e550748ce0a3c083))
+* **core:** reset alpha when the picked color has none ([d28651d](https://github.com/dpezto/C-3PO.nvim/commit/d28651d5c2920f3c15cd354d35a322890c8e595b))
+* **core:** restore the history entry under the cursor ([2e6d783](https://github.com/dpezto/C-3PO.nvim/commit/2e6d783ac5563c8ad9896caab9fe08626bb60489))
+* **core:** write the picked color back to the buffer it came from ([61b58fe](https://github.com/dpezto/C-3PO.nvim/commit/61b58fe00ea34e2afbe5ca674538854d35da6445))
+* correctness and performance fixes ([1a5bb3c](https://github.com/dpezto/C-3PO.nvim/commit/1a5bb3c796a7b5f82ffb0d641440fccbeaf028de))
+* **custom_entries:** handle a table with no valid entry ([db418d2](https://github.com/dpezto/C-3PO.nvim/commit/db418d234c13efe92de8a6f1967f0bfc469b4421))
+* **highlighter:** apply the filetype filters to automatic enabling only ([535348a](https://github.com/dpezto/C-3PO.nvim/commit/535348ae5229a569bec64da944622dafd8ea4773))
+* **highlighter:** keep highlighting across reloads and colorscheme changes ([62686c4](https://github.com/dpezto/C-3PO.nvim/commit/62686c45902591ad2cdc73fa5349ccb7be316bea))
+* **highlighter:** stop stale callbacks after a disable ([949f13b](https://github.com/dpezto/C-3PO.nvim/commit/949f13b5ec4001916349b56180af448284df6dd9))
+* **input:** keep white unchanged in the XYZ input ([e65c3ff](https://github.com/dpezto/C-3PO.nvim/commit/e65c3ff748f1e729291018d14311881c873dac2b))
+* **latex_name:** clear per-buffer caches on BufWipeout ([96d273d](https://github.com/dpezto/C-3PO.nvim/commit/96d273d7b074295f1f92cba7cc4aaca070e1ee87))
+* **latex_name:** drop definitions deleted from the open file ([af9cbef](https://github.com/dpezto/C-3PO.nvim/commit/af9cbeff716caa262257bd057d1526a1eebb4c7b))
+* **latex_name:** ignore commented definitions and respect \providecolor ([d011dd1](https://github.com/dpezto/C-3PO.nvim/commit/d011dd18a530fd514f4959c1fdd9c7f7d395d315))
+* **lsp:** convert documentColor offsets to byte columns ([afda484](https://github.com/dpezto/C-3PO.nvim/commit/afda4849a30846641f9b4411373f0a5421f133cd))
+* **picker:** accept CSS colors outside the reference ranges ([241de3b](https://github.com/dpezto/C-3PO.nvim/commit/241de3bbdbda61e103cae48b4676f68f8bbd6cc6))
+
+
+### Performance Improvements
+
+* **pattern:** stop rescanning long lines for patterns with no match left ([47c8903](https://github.com/dpezto/C-3PO.nvim/commit/47c8903598615f2b86e48529bd5877290a60988c))
+
 ## [1.1.0](https://github.com/dpezto/C-3PO.nvim/compare/v1.0.2...v1.1.0) (2026-09-21)
 
 
