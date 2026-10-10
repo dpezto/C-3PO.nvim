@@ -304,8 +304,9 @@ function LatexNamePicker:init()
   -- Within a buffer the changedtick guard in names() keeps everything current.
   -- A write is the one event that changes what *other* buffers can see, since
   -- the project scan reads files rather than buffers.
+  local group = vim.api.nvim_create_augroup("c3po-latex-name", {})
   vim.api.nvim_create_autocmd("BufWritePost", {
-    group = vim.api.nvim_create_augroup("c3po-latex-name", {}),
+    group = group,
     pattern = { "*.tex", "*.sty" },
     callback = function()
       project, bases, live, live_tick, roots = {}, {}, {}, {}, {}
@@ -315,6 +316,12 @@ function LatexNamePicker:init()
           highlighter:update(bufnr, 0, -1)
         end
       end
+    end,
+  })
+  vim.api.nvim_create_autocmd("BufWipeout", {
+    group = group,
+    callback = function(ev)
+      bases[ev.buf], live[ev.buf], live_tick[ev.buf], roots[ev.buf] = nil, nil, nil, nil
     end,
   })
 end
@@ -487,6 +494,12 @@ function LatexNamePicker.setup_completion()
     pattern = { "tex", "latex", "plaintex" },
     callback = function(ev)
       install(ev.buf)
+    end,
+  })
+  vim.api.nvim_create_autocmd("BufWipeout", {
+    group = "c3po-latex-completion",
+    callback = function(ev)
+      delegating[ev.buf], previous[ev.buf] = nil, nil
     end,
   })
   -- Under a lazy-loading plugin manager setup() itself often runs *from* the
