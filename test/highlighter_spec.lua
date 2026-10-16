@@ -111,6 +111,27 @@ describe("Highlighter", function()
     assert.equal(2, #marks(bufnr))
   end)
 
+  it("unpaints the uses of a definition whose line is deleted", function()
+    -- A whole-line deletion gives on_lines an empty range to repaint.
+    -- TextChanged is fired by hand: headless input never reaches the main
+    -- loop's check that fires it.
+    with_options({ pickers = { require("c3po.picker.latex_name") } }, function()
+      bufnr = scratch({ [[\definecolor{holo}{RGB}{255,0,0}]], [[\textcolor{holo}{x}]] }, "tex")
+      highlighter:enable(bufnr)
+      assert.equal(2, #marks(bufnr))
+      -- Let anything enable() queued run first, so it cannot do the repaint.
+      vim.wait(50, function()
+        return false
+      end)
+      vim.api.nvim_buf_set_lines(bufnr, 0, 1, false, {})
+      vim.api.nvim_exec_autocmds("TextChanged", { buffer = bufnr })
+      vim.wait(500, function()
+        return #marks(bufnr) == 0
+      end)
+      assert.equal(0, #marks(bufnr))
+    end)
+  end)
+
   it("skips the picker when it is turned off", function()
     bufnr = scratch({ "#ff0000" })
     with_options({ highlighter = vim.tbl_extend("force", config.options.highlighter, { picker = false }) }, function()

@@ -44,13 +44,26 @@ local COLORLET = "\\colorlet[^{]*{([0-9A-Za-z@_-]+)}{([^}]+)}"
 -- an operand of a mix completes like a first argument does.
 local COMMAND_ARG = "\\%a*color%a*{[-0-9A-Za-z@_.,:;!]*$"
 local COLORLET_ARG = "\\colorlet{[0-9A-Za-z@_-]+}{[-0-9A-Za-z@_.,:;!]*$"
--- What may stand right before a match: a color command's opening brace, or
--- \colorlet's second one. The `}{` pattern below cannot see the command it
--- follows, so without this `\textcolor{red}{blue}` would paint the word blue.
+-- What may stand right before a match: a color command's opening brace,
+-- \colorlet's second one, or \fcolorbox's second one, its background. The `}{`
+-- pattern below cannot see the command it follows, so without this
+-- `\textcolor{red}{blue}` would paint the word blue.
 local ARG_PREFIX = {
   "\\%a*color%a*%[?[^%]{]*%]?{$",
   "\\colorlet%[?[^%]{]*%]?{[0-9A-Za-z@_-]+}{$",
+  "\\fcolorbox%[?[^%]{]*%]?{[-0-9A-Za-z@_.,:;!]+}{$",
 }
+
+---@param before string #The line up to the match
+---@return boolean
+local function after_color_arg(before)
+  for _, prefix in ipairs(ARG_PREFIX) do
+    if before:match(prefix) then
+      return true
+    end
+  end
+  return false
+end
 
 ---@return string[]
 local function build_patterns()
@@ -63,14 +76,13 @@ local function build_patterns()
     -- \colorlet{new}{old}: `new` is the name it defines, resolvable once `old`
     -- is.
     [=[\C\v\\colorlet]=] .. OPT .. [=[\{\zs]=] .. NAME .. [=[\ze\}]=],
-    -- `old`, the expression `new` is defined as. It cannot be found from
-    -- \colorlet: the caller resumes the scan just past `new`, so by the time
-    -- this is looked for, the command name is behind the search start. What is
-    -- left to key on is the second group following the first one immediately,
-    -- with nothing after it -- which is what rules out \definecolor{x}{gray},
-    -- where the group is a model name and another group follows. ARG_PREFIX
-    -- rules out the rest.
-    [=[\C\v^\}\{\zs]=] .. EXPR .. [=[\ze%(\}\{@!|$)]=],
+    -- `old`, the expression `new` is defined as, or \fcolorbox's background.
+    -- Neither can be found from its command: the caller resumes the scan just
+    -- past the first argument, so by the time this is looked for, the command
+    -- name is behind the search start. What is left to key on is the second
+    -- group following the first one immediately; ARG_PREFIX then checks which
+    -- command that first group belonged to.
+    [=[\C\v^\}\{\zs]=] .. EXPR .. ARG_END,
   }
 end
 
@@ -159,10 +171,6 @@ end
 ---Resolve `\colorlet` targets against the names already known, repeating while
 ---anything new comes out: a \colorlet may precede the definition it reads, and
 ---may read another \colorlet.
----Called once per layer rather than once at the end, so that a \colorlet only
----outranks the definitions of its own layer. Some other file in the project
----writing `\colorlet{myred}{red!70!black}` must not decide what `myred` is in a
----buffer that defines it itself.
 ---ponytail: quadratic in the number of \colorlet's, which is a handful per
 ---document. A cycle simply stays unresolved.
 ---@param names table<string, RGB> #Modified in place
@@ -185,7 +193,7 @@ end
 ---@alias c3po.LatexNameFile { path: string, names: table<string, RGB>, lets: table<string, string> }
 ---@type table<string, c3po.LatexNameFile[]> #Keyed by project root
 local project = {}
----@type table<integer, table<string, RGB>> #Keyed by bufnr: the project but the buffer's own file, \colorlet resolved
+---@type table<integer, { names: table<string, RGB>, lets: table<string, string> }> #Keyed by bufnr: the project but the buffer's own file
 local bases = {}
 ---@type table<integer, table<string, RGB>> #Keyed by bufnr, only while modified
 local live = {}
@@ -197,6 +205,25 @@ local roots = {}
 -- texlab's own root markers, plus .git for everyone who has none of them.
 local MARKERS = { ".latexmkrc", "latexmkrc", "Tectonic.toml", ".texlabroot", "texlabroot", ".git" }
 
+---The main document this buffer belongs to, when vimtex or a `% !TEX root`
+---magic comment names one. A chapter in its own directory finds its preamble
+---through it even without a root marker.
+---@param bufnr integer
+---@param name string #The buffer's file
+---@return string?
+local function main_of(bufnr, name)
+  local vimtex = vim.b[bufnr].vimtex
+  if type(vimtex) == "table" and type(vimtex.tex) == "string" and vimtex.tex ~= "" then
+    return vimtex.tex
+  end
+  for _, line in ipairs(vim.api.nvim_buf_get_lines(bufnr, 0, 5, false)) do
+    local main = line:match("^%%%s*!%s*[Tt][Ee][Xx]%s+root%s*=%s*(.-)%s*$")
+    if main and main ~= "" then
+      return vim.fs.normalize(main:sub(1, 1) == "/" and main or vim.fs.joinpath(vim.fs.dirname(name), main))
+    end
+  end
+end
+
 ---@param bufnr integer
 ---@return string #Empty when the buffer has no file to anchor on
 local function root_of(bufnr)
@@ -204,8 +231,20 @@ local function root_of(bufnr)
   if name == "" then
     return ""
   end
+  local main = main_of(bufnr, name)
   -- Never fall back to $HOME: the scan below would walk the whole home directory.
-  return vim.fs.root(bufnr, MARKERS) or vim.fs.dirname(name) or ""
+  return vim.fs.root(main or bufnr, MARKERS) or vim.fs.dirname(main or name) or ""
+end
+
+local MAX_FILES = 200
+local MAX_ENTRIES = 10000
+
+---Directories no document lives in: .git, editor and tool state, dependencies.
+---@param dir string #Relative to the root
+---@return boolean
+local function walk_into(dir)
+  local base = dir:match("[^/]*$")
+  return base:sub(1, 1) ~= "." and base ~= "node_modules"
 end
 
 ---@param root string
@@ -215,19 +254,26 @@ local function scan_project(root)
   if root == "" then
     return scanned
   end
-  -- ponytail: every *.tex/*.sty under the project root, capped at 200 files.
+  -- ponytail: every *.tex/*.sty under the project root, capped at MAX_FILES
+  -- files and MAX_ENTRIES directory entries, since the walk runs inside the
+  -- first repaint and a .git root may be a large repository.
   -- Following \input/\include properly needs TEXINPUTS, extension inference,
   -- \subimport bases and root-document detection -- texlab keeps a whole
   -- Workspace type for it. The glob is a superset for the price of some
   -- unrelated names, and a stray name is a stray swatch, not a wrong color.
-  local files = vim.fs.find(function(name)
-    return name:match("%.tex$") ~= nil or name:match("%.sty$") ~= nil
-  end, { path = root, type = "file", limit = 200 })
-  for _, path in ipairs(files) do
-    local ok, lines = pcall(vim.fn.readfile, path)
-    if ok then
-      local found, let = LatexNamePicker.scan_lines(lines)
-      table.insert(scanned, { path = vim.fs.normalize(path), names = found, lets = let })
+  local entries = 0
+  for rel, kind in vim.fs.dir(root, { depth = math.huge, skip = walk_into }) do
+    entries = entries + 1
+    if entries > MAX_ENTRIES or #scanned >= MAX_FILES then
+      break
+    end
+    if kind == "file" and (rel:match("%.tex$") or rel:match("%.sty$")) then
+      local path = vim.fs.normalize(vim.fs.joinpath(root, rel))
+      local ok, lines = pcall(vim.fn.readfile, path)
+      if ok then
+        local found, let = LatexNamePicker.scan_lines(lines)
+        table.insert(scanned, { path = path, names = found, lets = let })
+      end
     end
   end
   return scanned
@@ -238,6 +284,8 @@ end
 ---@param bufnr integer
 ---@return table<string, RGB>
 function LatexNamePicker.names(bufnr)
+  -- Completion may be the only caller, and it needs the cache invalidated too.
+  LatexNamePicker:init()
   local root = roots[bufnr]
   if root == nil then
     root = root_of(bufnr)
@@ -261,8 +309,9 @@ function LatexNamePicker.names(bufnr)
         lets = vim.tbl_extend("force", lets, file.lets)
       end
     end
-    base = vim.tbl_extend("force", BUILTIN, names)
-    resolve(base, lets)
+    -- The \colorlet's stay unevaluated: they may read a name only this buffer
+    -- defines.
+    base = { names = vim.tbl_extend("force", BUILTIN, names), lets = lets }
     bases[bufnr] = base
   end
 
@@ -278,14 +327,24 @@ function LatexNamePicker.names(bufnr)
   if live_tick[bufnr] ~= tick then
     local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
     local names, lets = LatexNamePicker.scan_lines(lines)
-    local merged = vim.tbl_extend("force", base, names)
-    -- The buffer's \colorlet's last: they read this buffer's definitions, so
-    -- they can only be evaluated once every one of them is in.
-    resolve(merged, lets)
+    local merged = vim.tbl_extend("force", base.names, names)
+    -- Every \colorlet is evaluated once all definitions are in, the buffer's
+    -- included, so a project \colorlet may read a name only the buffer defines.
+    -- It never redefines one the buffer defines itself, though: some other
+    -- file writing `\colorlet{myred}{red!70!black}` must not decide what
+    -- `myred` is in a buffer that says otherwise.
+    local all_lets = {}
+    for name, value in pairs(base.lets) do
+      if names[name] == nil and lets[name] == nil then
+        all_lets[name] = value
+      end
+    end
+    resolve(merged, vim.tbl_extend("force", all_lets, lets))
     -- A definition changed, so every use of that name is the wrong color now --
     -- including the ones this repaint will not reach, since on_lines only covers
-    -- the edited range. Scheduled because we are inside that very repaint.
-    if not vim.deep_equal(live[bufnr] or base, merged) then
+    -- the edited range. Scheduled because we are inside that very repaint. The
+    -- first build needs none: nothing has been painted from it yet.
+    if live[bufnr] and not vim.deep_equal(live[bufnr], merged) then
       vim.schedule(function()
         require("c3po.highlighter"):update(bufnr, 0, -1)
       end)
@@ -308,13 +367,44 @@ function LatexNamePicker:init()
   vim.api.nvim_create_autocmd("BufWritePost", {
     group = group,
     pattern = { "*.tex", "*.sty" },
-    callback = function()
-      project, bases, live, live_tick, roots = {}, {}, {}, {}, {}
+    callback = function(ev)
+      local path = vim.fs.normalize(vim.api.nvim_buf_get_name(ev.buf))
+      -- The buffer is what was just written, so it stands in for the file.
+      local found, let = LatexNamePicker.scan_lines(vim.api.nvim_buf_get_lines(ev.buf, 0, -1, false))
       local highlighter = require("c3po.highlighter")
-      for bufnr in pairs(highlighter.attached_buffer) do
-        if vim.api.nvim_buf_is_valid(bufnr) and TEX_FT[vim.bo[bufnr].filetype] then
-          highlighter:update(bufnr, 0, -1)
+      for root, files in pairs(project) do
+        if root ~= "" and vim.startswith(path, root .. "/") then
+          local entry = vim.iter(files):find(function(file)
+            return file.path == path
+          end)
+          if entry then
+            entry.names, entry.lets = found, let
+          else
+            table.insert(files, { path = path, names = found, lets = let })
+          end
+          for bufnr, buf_root in pairs(roots) do
+            if buf_root == root then
+              bases[bufnr], live_tick[bufnr] = nil, nil
+              -- names() repaints when the result differs from what was
+              -- painted. Hidden buffers wait until they are shown.
+              if #vim.fn.win_findbuf(bufnr) > 0 then
+                LatexNamePicker.names(bufnr)
+              elseif highlighter.attached_buffer[bufnr] then
+                highlighter.stale[bufnr] = true
+              end
+            end
+          end
         end
+      end
+    end,
+  })
+  -- Deleting whole lines hands on_lines an empty range, so no parse_color runs
+  -- and a deleted definition would keep painting its uses.
+  vim.api.nvim_create_autocmd("TextChanged", {
+    group = group,
+    callback = function(ev)
+      if TEX_FT[vim.bo[ev.buf].filetype] and require("c3po.highlighter").attached_buffer[ev.buf] then
+        LatexNamePicker.names(ev.buf)
       end
     end,
   })
@@ -345,9 +435,7 @@ function LatexNamePicker:parse_color(s, init, bufnr)
     if start_col == nil or end_col == nil then
       return
     end
-    local before = s:sub(1, start_col - 1)
-    local rgb = (before:match(ARG_PREFIX[1]) or before:match(ARG_PREFIX[2]))
-      and expr.evaluate(s:sub(start_col, end_col), names)
+    local rgb = after_color_arg(s:sub(1, start_col - 1)) and expr.evaluate(s:sub(start_col, end_col), names)
     if rgb then
       return start_col, end_col, rgb
     end
@@ -485,10 +573,6 @@ end
 
 ---Install the completion function on tex buffers, keeping whatever was there.
 function LatexNamePicker.setup_completion()
-  -- Completing without highlighting is a valid setup, and it still needs the
-  -- cache invalidated; parse_color would otherwise be the only thing that ever
-  -- calls init().
-  LatexNamePicker:init()
   vim.api.nvim_create_autocmd("FileType", {
     group = vim.api.nvim_create_augroup("c3po-latex-completion", {}),
     pattern = { "tex", "latex", "plaintex" },
