@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.2](https://github.com/dpezto/C-3PO.nvim/compare/v1.1.1...v1.1.2) (2026-10-16)
+
+
+### Bug Fixes
+
+* **latex:** resolve project names against the buffer and scan faster ([8922834](https://github.com/dpezto/C-3PO.nvim/commit/8922834475a8c8e4fb5a1d29fe1eb511518dc36c))
+* **latex:** resolve project names against the buffer and scan faster ([c7dcf23](https://github.com/dpezto/C-3PO.nvim/commit/c7dcf23bff6df165beb3a8fccfb52687d7bf4c81))
+
 ## [1.1.1](https://github.com/dpezto/C-3PO.nvim/compare/v1.1.0...v1.1.1) (2026-10-10)
 
 
